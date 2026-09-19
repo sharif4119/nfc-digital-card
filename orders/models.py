@@ -25,7 +25,15 @@ class Order(models.Model):
         Product,
         on_delete=models.PROTECT,
     )
-
+    
+    assigned_card = models.OneToOneField(
+    "cards.NFCCard",
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name="assigned_order",
+    )
+    
     quantity = models.PositiveIntegerField(default=1)
 
     price = models.DecimalField(

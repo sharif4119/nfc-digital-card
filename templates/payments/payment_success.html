@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}
+Payment Successful
+{% endblock %}
+
+{% block content %}
+
+<div class="text-center py-5">
+
+    <h1>Payment Successful</h1>
+
+    <p>
+        Your sandbox payment for
+        Order #{{ order.id }}
+        was verified successfully.
+    </p>
+
+    <h4>
+        ৳{{ payment.amount }}
+    </h4>
+
+    <a
+        href="{% url 'order_detail' order.id %}"
+        class="btn btn-primary mt-3"
+    >
+        View Order
+    </a>
+
+</div>
+
+{% endblock %}

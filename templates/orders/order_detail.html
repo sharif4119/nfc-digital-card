@@ -61,13 +61,83 @@ Order #{{ order.id }}
                     <strong>Order Status:</strong>
                     {{ order.get_order_status_display }}
                 </p>
+                
+                {% if order.assigned_card %}
+
+                <hr>
+
+                <div class="alert alert-success">
+
+                    <h5>
+                        NFC Card Assigned
+                    </h5>
+
+                    <p class="mb-2">
+                        <strong>Card:</strong>
+                        {{ order.assigned_card.card_uid }}
+                    </p>
+
+                    <p class="mb-3">
+                        <strong>Status:</strong>
+                        {{ order.assigned_card.status }}
+                    </p>
+
+                            <a
+                                href="{% url 'public_card' order.assigned_card.public_token %}"
+                                class="btn btn-success"
+                                target="_blank"
+                            >
+                                Open Digital Card
+                            </a>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="alert alert-secondary">
+
+                            Your NFC card has not been assigned yet.
+
+                        </div>
+
+                    {% endif %}
+                            {% if order.payment_status != "PAID" %}
+
+                        <div class="alert alert-info mt-3">
+
+                            Online payment will be available
+                            after deployment.
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="alert alert-success mt-3">
+
+                            Payment completed successfully.
+
+                        </div>
+
+                    {% endif %}
 
                 <div class="alert alert-warning">
-
-                    Payment integration will be added
-                    in the next milestone.
-
+                    This order has not been paid yet.
                 </div>
+
+                <a
+                    href="{% url 'initiate_payment' order.id %}"
+                    class="btn btn-success"
+                >
+                    Pay Now
+                </a>
+
+            {% else %}
+
+    <div class="alert alert-success">
+        Payment completed successfully.
+    </div>
+
+{% endif %}
 
             </div>
 

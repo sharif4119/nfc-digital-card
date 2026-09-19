@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}
+Payment Failed
+{% endblock %}
+
+{% block content %}
+
+<div class="text-center py-5">
+
+    <h1>Payment Failed</h1>
+
+    <p>
+        The test payment was not completed.
+    </p>
+
+    <a
+        href="{% url 'order_list' %}"
+        class="btn btn-primary"
+    >
+        My Orders
+    </a>
+
+</div>
+
+{% endblock %}
