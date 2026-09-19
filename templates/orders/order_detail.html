@@ -64,80 +64,61 @@ Order #{{ order.id }}
                 
                 {% if order.assigned_card %}
 
-                <hr>
+                    <hr>
 
-                <div class="alert alert-success">
+                    <div class="alert alert-success">
 
-                    <h5>
-                        NFC Card Assigned
-                    </h5>
+                        <h5>
+                            NFC Card Assigned
+                        </h5>
 
-                    <p class="mb-2">
-                        <strong>Card:</strong>
-                        {{ order.assigned_card.card_uid }}
-                    </p>
+                        <p class="mb-2">
+                            <strong>Card:</strong>
+                            {{ order.assigned_card.card_uid }}
+                        </p>
 
-                    <p class="mb-3">
-                        <strong>Status:</strong>
-                        {{ order.assigned_card.status }}
-                    </p>
+                        <p class="mb-3">
+                            <strong>Status:</strong>
+                            {{ order.assigned_card.status }}
+                        </p>
 
-                            <a
-                                href="{% url 'public_card' order.assigned_card.public_token %}"
-                                class="btn btn-success"
-                                target="_blank"
-                            >
-                                Open Digital Card
-                            </a>
+                        <a
+                            href="{% url 'public_card' order.assigned_card.public_token %}"
+                            class="btn btn-success"
+                            target="_blank"
+                        >
+                            Open Digital Card
+                        </a>
 
-                        </div>
+                    </div>
 
-                    {% else %}
+                {% else %}
 
-                        <div class="alert alert-secondary">
+                    <div class="alert alert-secondary">
 
-                            Your NFC card has not been assigned yet.
+                        Your NFC card has not been assigned yet.
 
-                        </div>
+                    </div>
 
-                    {% endif %}
-                            {% if order.payment_status != "PAID" %}
+                {% endif %}
 
-                        <div class="alert alert-info mt-3">
+                {% if order.payment_status != "PAID" %}
 
-                            Online payment will be available
-                            after deployment.
+                    <div class="alert alert-info mt-3">
 
-                        </div>
+                        Online payment will be available after deployment.
 
-                    {% else %}
+                    </div>
 
-                        <div class="alert alert-success mt-3">
+                {% else %}
 
-                            Payment completed successfully.
+                    <div class="alert alert-success mt-3">
 
-                        </div>
+                        Payment completed successfully.
 
-                    {% endif %}
+                    </div>
 
-                <div class="alert alert-warning">
-                    This order has not been paid yet.
-                </div>
-
-                <a
-                    href="{% url 'initiate_payment' order.id %}"
-                    class="btn btn-success"
-                >
-                    Pay Now
-                </a>
-
-            {% else %}
-
-    <div class="alert alert-success">
-        Payment completed successfully.
-    </div>
-
-{% endif %}
+                {% endif %}
 
             </div>
 

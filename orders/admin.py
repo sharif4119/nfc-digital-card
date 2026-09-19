@@ -183,3 +183,18 @@ class OrderAdmin(admin.ModelAdmin):
                         "order_status",
                     ]
                 )
+        elif (
+            previous_card
+            and obj.order_status == "CARD_ASSIGNED"
+        ):
+            obj.order_status = (
+                "PAID"
+                if obj.payment_status == "PAID"
+                else "PENDING"
+            )
+
+            obj.save(
+                update_fields=[
+                    "order_status",
+                ]
+            )

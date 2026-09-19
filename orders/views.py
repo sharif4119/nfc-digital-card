@@ -23,11 +23,8 @@ def create_order(request, product_id):
 
             order.user = request.user
             order.product = product
-
-            order.price = (
-                product.price
-                * order.quantity
-            )
+            order.quantity = 1
+            order.price = product.price
 
             order.save()
 
