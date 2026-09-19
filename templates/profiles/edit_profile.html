@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}
+Edit Profile
+{% endblock %}
+
+
+{% block content %}
+
+<div class="row justify-content-center">
+
+    <div class="col-lg-8">
+
+        <div class="card shadow-sm">
+
+            <div class="card-body p-4">
+
+                <h2 class="mb-4">
+                    Edit Digital Profile
+                </h2>
+
+                <form
+                    method="post"
+                    enctype="multipart/form-data"
+                >
+
+                    {% csrf_token %}
+
+                    {{ form.as_p }}
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Save Profile
+                    </button>
+
+                    <a
+                        href="{% url 'profile_preview' %}"
+                        class="btn btn-outline-secondary"
+                    >
+                        Preview
+                    </a>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

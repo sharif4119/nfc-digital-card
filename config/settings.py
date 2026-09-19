@@ -41,7 +41,7 @@ INSTALLED_APPS = [
      # Project apps
     "core",
     "accounts",
-    "profiles",
+    "profiles.apps.ProfilesConfig",
     "cards",
     "products",
     "orders",

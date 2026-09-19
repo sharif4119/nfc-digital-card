@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}
+Profile Preview
+{% endblock %}
+
+
+{% block content %}
+
+<div class="row justify-content-center">
+
+    <div class="col-md-7 col-lg-5">
+
+        <div class="card shadow text-center">
+
+            <div class="card-body p-4">
+
+                {% if profile.profile_picture %}
+
+                    <img
+                        src="{{ profile.profile_picture.url }}"
+                        alt="Profile photo"
+                        class="rounded-circle mb-3"
+                        style="
+                            width: 130px;
+                            height: 130px;
+                            object-fit: cover;
+                        "
+                    >
+
+                {% endif %}
+
+                <h2>
+                    {{ profile.full_name|default:user.username }}
+                </h2>
+
+                {% if profile.job_title %}
+                    <p class="mb-1">
+                        {{ profile.job_title }}
+                    </p>
+                {% endif %}
+
+                {% if profile.company %}
+                    <p class="text-muted">
+                        {{ profile.company }}
+                    </p>
+                {% endif %}
+
+                {% if profile.bio %}
+                    <p>
+                        {{ profile.bio }}
+                    </p>
+                {% endif %}
+
+                <hr>
+
+                {% if profile.phone %}
+                    <p>
+                        <strong>Phone:</strong>
+                        {{ profile.phone }}
+                    </p>
+                {% endif %}
+
+                {% if profile.email %}
+                    <p>
+                        <strong>Email:</strong>
+                        {{ profile.email }}
+                    </p>
+                {% endif %}
+
+                {% if profile.website %}
+                    <p>
+                        <a
+                            href="{{ profile.website }}"
+                            target="_blank"
+                        >
+                            Website
+                        </a>
+                    </p>
+                {% endif %}
+
+                {% if profile.address %}
+                    <p>
+                        {{ profile.address }}
+                    </p>
+                {% endif %}
+
+                <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
+
+                    {% if profile.facebook %}
+                        <a
+                            href="{{ profile.facebook }}"
+                            class="btn btn-outline-primary btn-sm"
+                            target="_blank"
+                        >
+                            Facebook
+                        </a>
+                    {% endif %}
+
+                    {% if profile.instagram %}
+                        <a
+                            href="{{ profile.instagram }}"
+                            class="btn btn-outline-primary btn-sm"
+                            target="_blank"
+                        >
+                            Instagram
+                        </a>
+                    {% endif %}
+
+                    {% if profile.linkedin %}
+                        <a
+                            href="{{ profile.linkedin }}"
+                            class="btn btn-outline-primary btn-sm"
+                            target="_blank"
+                        >
+                            LinkedIn
+                        </a>
+                    {% endif %}
+
+                    {% if profile.github %}
+                        <a
+                            href="{{ profile.github }}"
+                            class="btn btn-outline-dark btn-sm"
+                            target="_blank"
+                        >
+                            GitHub
+                        </a>
+                    {% endif %}
+
+                </div>
+
+                <div class="mt-4">
+
+                    <a
+                        href="{% url 'edit_profile' %}"
+                        class="btn btn-primary"
+                    >
+                        Edit Profile
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
