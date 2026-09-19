@@ -62,4 +62,42 @@ Dashboard
 
 </div>
 
+{% if card %}
+
+    <hr>
+
+    <h5>
+        My NFC Card
+    </h5>
+
+    <p>
+        <strong>Card:</strong>
+        {{ card.card_uid }}
+    </p>
+
+    <p>
+        <strong>Status:</strong>
+        {{ card.status }}
+    </p>
+
+    {% if card.status == "ACTIVE" %}
+
+        <a
+            href="{% url 'public_card' card.public_token %}"
+            class="btn btn-success"
+            target="_blank"
+        >
+            View Public Card
+        </a>
+
+    {% endif %}
+
+{% else %}
+
+    <div class="alert alert-secondary">
+        No NFC card has been assigned to your account yet.
+    </div>
+
+{% endif %}
+
 {% endblock %}

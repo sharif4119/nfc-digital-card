@@ -1,3 +1,22 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 
-# Create your views here.
+from .models import NFCCard
+
+
+def public_card_view(request, token):
+    card = get_object_or_404(
+        NFCCard,
+        public_token=token,
+        status="ACTIVE",
+    )
+
+    profile = card.owner.profile
+
+    return render(
+        request,
+        "cards/public_card.html",
+        {
+            "card": card,
+            "profile": profile,
+        },
+    )

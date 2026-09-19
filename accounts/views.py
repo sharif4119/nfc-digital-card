@@ -28,7 +28,16 @@ def register_view(request):
 
 @login_required
 def dashboard_view(request):
+    card = getattr(
+        request.user,
+        "nfc_card",
+        None,
+    )
+
     return render(
         request,
         "accounts/dashboard.html",
+        {
+            "card": card,
+        },
     )
