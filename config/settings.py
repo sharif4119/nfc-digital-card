@@ -186,8 +186,10 @@ STORAGES = {
     },
     "staticfiles": {
         "BACKEND": (
-            "whitenoise.storage."
-            "CompressedManifestStaticFilesStorage"
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
         ),
     },
 }
@@ -210,11 +212,49 @@ SSLCOMMERZ_SANDBOX = True
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+if DEBUG:
+    MAILERS = {
+        "default": {
+            "BACKEND": (
+                "django.core.mail.backends."
+                "console.EmailBackend"
+            ),
+        },
+    }
+else:
+    MAILERS = {
+        "default": {
+            "BACKEND": (
+                "django.core.mail.backends."
+                "smtp.EmailBackend"
+            ),
+            "OPTIONS": {
+                "host": os.getenv(
+                    "EMAIL_HOST",
+                    "localhost",
+                ),
+                "port": int(
+                    os.getenv(
+                        "EMAIL_PORT",
+                        "587",
+                    )
+                ),
+                "username": os.getenv(
+                    "EMAIL_HOST_USER",
+                    "",
+                ),
+                "password": os.getenv(
+                    "EMAIL_HOST_PASSWORD",
+                    "",
+                ),
+                "use_tls": env_bool(
+                    "EMAIL_USE_TLS",
+                    True,
+                ),
+            },
+        },
+    }
+    
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
 
