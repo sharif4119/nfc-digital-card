@@ -5,7 +5,7 @@ from django.db import models
 
 
 def generate_public_token():
-    return secrets.token_urlsafe(6)
+    return secrets.token_urlsafe(9)
 
 
 class NFCCard(models.Model):

@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 
 from .models import NFCCard
-
+from django.http import Http404
 
 def public_card_view(request, token):
     card = get_object_or_404(
@@ -14,7 +14,21 @@ def public_card_view(request, token):
         status="ACTIVE",
     )
 
-    profile = card.owner.profile
+    if not card.owner:
+        raise Http404(
+            "This card has no owner."
+        )
+
+    profile = getattr(
+        card.owner,
+        "profile",
+        None,
+    )
+
+    if not profile:
+        raise Http404(
+            "Profile not found."
+        )
 
     return render(
         request,
@@ -57,7 +71,13 @@ def download_vcard(request, token):
         status="ACTIVE",
     )
 
-    profile = card.owner.profile
+    if not card.owner:
+        raise Http404("This card has no owner.")
+
+    profile = getattr(card.owner, "profile", None)
+
+    if not profile:
+        raise Http404("Profile not found.")
 
     vcard = [
         "BEGIN:VCARD",
