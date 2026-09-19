@@ -7,6 +7,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("", include("core.urls")),
 
     path("", include("accounts.urls")),
 
@@ -19,6 +20,9 @@ urlpatterns = [
     include("profiles.urls"),
     ),
     path("", include("cards.urls")),
+    path("", include("products.urls")),
+    path("", include("orders.urls")),
+    
 ]
 
 if settings.DEBUG:
