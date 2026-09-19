@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+{% load static %}
+
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -18,65 +21,102 @@
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
         rel="stylesheet"
     >
+    <link
+    rel="stylesheet"
+    href="{% static 'css/style.css' %}"
+    >
 </head>
 
 <body class="bg-light">
 
-<nav class="navbar navbar-dark bg-dark">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+
     <div class="container">
 
         <a
-            class="navbar-brand"
-            href="/"
+            class="navbar-brand fw-bold"
+            href="{% url 'home' %}"
         >
-            NFC Card
+            NFC Digital Card
         </a>
 
-        <div>
-            {% if user.is_authenticated %}
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#mainNavbar"
+        >
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div
+            class="collapse navbar-collapse"
+            id="mainNavbar"
+        >
+
+            <div class="navbar-nav ms-auto align-items-lg-center gap-2">
 
                 <a
-                    href="{% url 'dashboard' %}"
-                    class="btn btn-outline-light btn-sm"
+                    href="{% url 'product_list' %}"
+                    class="nav-link"
                 >
-                    Dashboard
+                    Cards
                 </a>
 
-                <form
-                    method="post"
-                    action="{% url 'logout' %}"
-                    class="d-inline"
-                >
-                    {% csrf_token %}
+                {% if user.is_authenticated %}
 
-                    <button
-                        type="submit"
-                        class="btn btn-danger btn-sm"
+                    <a
+                        href="{% url 'dashboard' %}"
+                        class="nav-link"
                     >
-                        Logout
-                    </button>
-                </form>
+                        Dashboard
+                    </a>
 
-            {% else %}
+                    <a
+                        href="{% url 'order_list' %}"
+                        class="nav-link"
+                    >
+                        My Orders
+                    </a>
 
-                <a
-                    href="{% url 'login' %}"
-                    class="btn btn-outline-light btn-sm"
-                >
-                    Login
-                </a>
+                    <form
+                        method="post"
+                        action="{% url 'logout' %}"
+                    >
+                        {% csrf_token %}
 
-                <a
-                    href="{% url 'register' %}"
-                    class="btn btn-primary btn-sm"
-                >
-                    Register
-                </a>
+                        <button
+                            type="submit"
+                            class="btn btn-outline-light btn-sm"
+                        >
+                            Logout
+                        </button>
+                    </form>
 
-            {% endif %}
+                {% else %}
+
+                    <a
+                        href="{% url 'login' %}"
+                        class="btn btn-outline-light btn-sm"
+                    >
+                        Login
+                    </a>
+
+                    <a
+                        href="{% url 'register' %}"
+                        class="btn btn-primary btn-sm"
+                    >
+                        Register
+                    </a>
+
+                {% endif %}
+
+            </div>
+
         </div>
 
     </div>
+
 </nav>
 
 <a
@@ -101,7 +141,17 @@
 
 </main>
 
+<footer class="border-top mt-5 py-4 bg-white">
 
+    <div class="container text-center">
+
+        <p class="text-muted mb-0">
+            NFC Digital Card System
+        </p>
+
+    </div>
+
+</footer>
 <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js">
 </script>

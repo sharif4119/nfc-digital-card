@@ -7,110 +7,285 @@ Dashboard
 
 {% block content %}
 
-<div class="row">
+<div class="mb-4">
 
-    <div class="col-lg-8 mx-auto">
+    <h1 class="h2">
+        Welcome, {{ user.username }}
+    </h1>
 
-        <div class="card shadow-sm">
+    <p class="text-muted">
+        Manage your digital profile, NFC card, and orders.
+    </p>
 
-            <div class="card-body p-4">
+</div>
 
-                <h1 class="h3">
-                    Welcome, {{ user.username }}
-                </h1>
 
-                <p class="text-muted">
-                    Your NFC card dashboard will appear here.
-                </p>
+<div class="row g-4">
 
-                <hr>
+    <!-- PROFILE -->
 
-                <p>
-                    <strong>Email:</strong>
-                    {{ user.email }}
-                </p>
+    <div class="col-lg-4">
 
-                <div class="alert alert-info">
+        <div class="card shadow-sm h-100">
 
-                    NFC card management and profile editing
-                    will be added in the next milestones.
+            <div class="card-body">
 
-                </div>
+                <h5 class="mb-3">
+                    Digital Profile
+                </h5>
+
+                {% if profile and profile.profile_picture %}
+
+                    <img
+                        src="{{ profile.profile_picture.url }}"
+                        class="rounded-circle mb-3"
+                        style="
+                            width: 80px;
+                            height: 80px;
+                            object-fit: cover;
+                        "
+                        alt="Profile photo"
+                    >
+
+                {% endif %}
+
+                <h6>
+                    {% if profile and profile.full_name %}
+                        {{ profile.full_name }}
+                    {% else %}
+                        {{ user.username }}
+                    {% endif %}
+                </h6>
+
+                {% if profile.job_title %}
+                    <p class="text-muted mb-2">
+                        {{ profile.job_title }}
+                    </p>
+                {% endif %}
+
+                <a
+                    href="{% url 'edit_profile' %}"
+                    class="btn btn-primary btn-sm"
+                >
+                    Edit Profile
+                </a>
+
+                <a
+                    href="{% url 'profile_preview' %}"
+                    class="btn btn-outline-secondary btn-sm"
+                >
+                    Preview
+                </a>
 
             </div>
 
         </div>
 
     </div>
-    <div class="mt-3">
 
-    <a
-        href="{% url 'edit_profile' %}"
-        class="btn btn-primary"
-    >
-        Edit Profile
-    </a>
 
-    <a
-        href="{% url 'profile_preview' %}"
-        class="btn btn-outline-secondary"
-    >
-        Preview Profile
-    </a>
+    <!-- NFC CARD -->
 
-</div>
+    <div class="col-lg-4">
 
-</div>
+        <div class="card shadow-sm h-100">
 
-{% if card %}
+            <div class="card-body">
 
-    <hr>
+                <h5 class="mb-3">
+                    My NFC Card
+                </h5>
 
-    <h5>
-        My NFC Card
-    </h5>
+                {% if card %}
 
-    <p>
-        <strong>Card:</strong>
-        {{ card.card_uid }}
-    </p>
+                    <p class="mb-1">
+                        <strong>Card ID:</strong>
+                        {{ card.card_uid }}
+                    </p>
 
-    <p>
-        <strong>Status:</strong>
-        {{ card.status }}
-    </p>
+                    <p>
+                        <strong>Status:</strong>
 
-    {% if card.status == "ACTIVE" %}
+                        {% if card.status == "ACTIVE" %}
+                            <span class="badge bg-success">
+                                Active
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary">
+                                {{ card.status }}
+                            </span>
+                        {% endif %}
+                    </p>
 
-        <a
-            href="{% url 'public_card' card.public_token %}"
-            class="btn btn-success"
-            target="_blank"
-        >
-            View Public Card
-        </a>
-        <div class="mt-4">
+                    {% if card.status == "ACTIVE" %}
 
-    <h6>
-        Your QR Code
-    </h6>
+                        <a
+                            href="{% url 'public_card' card.public_token %}"
+                            class="btn btn-success btn-sm"
+                            target="_blank"
+                        >
+                            Open Card
+                        </a>
 
-    <img
-        src="{% url 'card_qr' card.public_token %}"
-        alt="QR Code"
-        style="max-width: 180px;"
-    >
+                    {% endif %}
+
+                {% else %}
+
+                    <p class="text-muted">
+                        No NFC card has been assigned yet.
+                    </p>
+
+                    <a
+                        href="{% url 'product_list' %}"
+                        class="btn btn-primary btn-sm"
+                    >
+                        Browse Cards
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+        </div>
 
     </div>
 
-    {% endif %}
 
-{% else %}
+    <!-- QR -->
 
-    <div class="alert alert-secondary">
-        No NFC card has been assigned to your account yet.
+    <div class="col-lg-4">
+
+        <div class="card shadow-sm h-100">
+
+            <div class="card-body text-center">
+
+                <h5 class="mb-3">
+                    QR Code
+                </h5>
+
+                {% if card and card.status == "ACTIVE" %}
+
+                    <img
+                        src="{% url 'card_qr' card.public_token %}"
+                        alt="QR Code"
+                        class="img-fluid"
+                        style="max-width: 160px;"
+                    >
+
+                    <p class="small text-muted mt-2">
+                        Scan to open your digital card.
+                    </p>
+
+                {% else %}
+
+                    <p class="text-muted">
+                        QR code will appear after
+                        your NFC card is activated.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
     </div>
 
-{% endif %}
+</div>
+
+
+<!-- RECENT ORDERS -->
+
+<div class="card shadow-sm mt-4">
+
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+
+            <h5 class="mb-0">
+                Recent Orders
+            </h5>
+
+            <a
+                href="{% url 'order_list' %}"
+                class="btn btn-outline-primary btn-sm"
+            >
+                View All
+            </a>
+
+        </div>
+
+        {% if recent_orders %}
+
+            <div class="table-responsive">
+
+                <table class="table align-middle">
+
+                    <thead>
+
+                        <tr>
+                            <th>Order</th>
+                            <th>Product</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for order in recent_orders %}
+
+                            <tr>
+
+                                <td>
+                                    #{{ order.id }}
+                                </td>
+
+                                <td>
+                                    {{ order.product.name }}
+                                </td>
+
+                                <td>
+                                    ৳{{ order.price }}
+                                </td>
+
+                                <td>
+                                    {{ order.get_order_status_display }}
+                                </td>
+
+                                <td>
+
+                                    <a
+                                        href="{% url 'order_detail' order.id %}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+                                        View
+                                    </a>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <p class="text-muted mb-0">
+                You haven't placed any orders yet.
+            </p>
+
+        {% endif %}
+
+    </div>
+
+</div>
 
 {% endblock %}

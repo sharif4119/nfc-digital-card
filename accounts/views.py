@@ -34,10 +34,22 @@ def dashboard_view(request):
         None,
     )
 
+    profile = getattr(
+        request.user,
+        "profile",
+        None,
+    )
+
+    recent_orders = request.user.orders.order_by(
+        "-created_at"
+    )[:3]
+
     return render(
         request,
         "accounts/dashboard.html",
         {
             "card": card,
+            "profile": profile,
+            "recent_orders": recent_orders,
         },
     )
