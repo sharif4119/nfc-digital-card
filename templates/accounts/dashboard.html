@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}
+Dashboard
+{% endblock %}
+
+
+{% block content %}
+
+<div class="row">
+
+    <div class="col-lg-8 mx-auto">
+
+        <div class="card shadow-sm">
+
+            <div class="card-body p-4">
+
+                <h1 class="h3">
+                    Welcome, {{ user.username }}
+                </h1>
+
+                <p class="text-muted">
+                    Your NFC card dashboard will appear here.
+                </p>
+
+                <hr>
+
+                <p>
+                    <strong>Email:</strong>
+                    {{ user.email }}
+                </p>
+
+                <div class="alert alert-info">
+
+                    NFC card management and profile editing
+                    will be added in the next milestones.
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
