@@ -1,155 +1,123 @@
 {% extends "base.html" %}
 
-{% block title %}
-NFC Digital Card
-{% endblock %}
-
+{% block title %}Tap once. Share everything.{% endblock %}
+{% block body_class %}home-page{% endblock %}
 
 {% block content %}
-
-<section class="py-5">
-
-    <div class="row align-items-center">
-
-        <div class="col-lg-7">
-
-            <h1 class="display-4 fw-bold">
-                One Card.
-                One Tap.
-                Always Updated.
-            </h1>
-
-            <p class="lead text-muted mt-3">
-
-                Share your contact information,
-                social links and professional profile
-                using a single NFC-enabled business card.
-
-            </p>
-
-            <div class="mt-4">
-
-                <a
-                    href="{% url 'product_list' %}"
-                    class="btn btn-primary btn-lg"
-                >
-                    Browse Cards
-                </a>
-
-                {% if user.is_authenticated %}
-
-                    <a
-                        href="{% url 'dashboard' %}"
-                        class="btn btn-outline-dark btn-lg"
-                    >
-                        Dashboard
-                    </a>
-
-                {% else %}
-
-                    <a
-                        href="{% url 'register' %}"
-                        class="btn btn-outline-dark btn-lg"
-                    >
-                        Create Account
-                    </a>
-
-                {% endif %}
-
+<section class="hero-section">
+    <div class="hero-glow hero-glow-one"></div>
+    <div class="hero-glow hero-glow-two"></div>
+    <div class="container position-relative">
+        <div class="row align-items-center g-5 min-vh-hero">
+            <div class="col-lg-6">
+                <div class="eyebrow eyebrow-light"><span class="eyebrow-dot"></span>Your professional identity, reimagined</div>
+                <h1 class="hero-title">Tap once.<br><span>Share everything.</span></h1>
+                <p class="hero-copy">One premium NFC card for your contact details, social links, website, and professional story—always current and ready to share.</p>
+                <div class="hero-actions">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'product_list' %}" class="btn btn-brand btn-lg">Get Your Card <i class="bi bi-arrow-right"></i></a>
+                    {% else %}
+                        <a href="{% url 'register' %}" class="btn btn-brand btn-lg">Get Your Card <i class="bi bi-arrow-right"></i></a>
+                    {% endif %}
+                    <a href="{% url 'product_list' %}" class="btn btn-hero-outline btn-lg">View Cards</a>
+                </div>
+                <div class="hero-note"><i class="bi bi-phone"></i>No app needed for the person receiving your profile.</div>
             </div>
-
+            <div class="col-lg-6">
+                <div class="hero-visual" aria-label="NexTap NFC card preview">
+                    <div class="tap-ripple tap-ripple-one"></div>
+                    <div class="tap-ripple tap-ripple-two"></div>
+                    <div class="nfc-cue"><i class="bi bi-broadcast-pin"></i><span>Tap to connect</span></div>
+                    <div class="nfc-card-mockup">
+                        <div class="mockup-shine"></div>
+                        <div class="mockup-topline">
+                            <div class="brand-lockup mockup-brand"><span class="brand-mark">N</span><span>NexTap</span></div>
+                            <i class="bi bi-wifi mockup-nfc"></i>
+                        </div>
+                        <div class="mockup-profile">
+                            <div class="mockup-avatar">YN</div>
+                            <div><strong>Your Name</strong><span>Your role · Your company</span></div>
+                        </div>
+                        <div class="mockup-footer"><span>Tap once. Share everything.</span><span class="mockup-chip"></span></div>
+                    </div>
+                    <div class="scan-card"><i class="bi bi-qr-code-scan"></i><div><strong>QR ready</strong><span>Scan when NFC isn't available</span></div></div>
+                </div>
+            </div>
         </div>
-
     </div>
-
 </section>
 
-
-<section class="py-5 border-top">
-
-    <div class="text-center mb-5">
-
-        <h2>
-            How It Works
-        </h2>
-
+<section class="section-space bg-white" id="how-it-works">
+    <div class="container">
+        <div class="section-heading text-center mx-auto">
+            <div class="eyebrow">Simple by design</div>
+            <h2>From profile to connection in three steps</h2>
+            <p>Set up once, then share a polished digital identity wherever you go.</p>
+        </div>
+        <div class="row g-4 process-grid">
+            <div class="col-md-4"><article class="process-card h-100"><span class="process-number">01</span><div class="icon-tile"><i class="bi bi-person-vcard"></i></div><h3>Create Profile</h3><p>Add your professional details, contact information, and social links.</p></article></div>
+            <div class="col-md-4"><article class="process-card h-100"><span class="process-number">02</span><div class="icon-tile"><i class="bi bi-credit-card-2-front"></i></div><h3>Order Card</h3><p>Choose your NexTap card and place an order through your account.</p></article></div>
+            <div class="col-md-4"><article class="process-card h-100"><span class="process-number">03</span><div class="icon-tile"><i class="bi bi-broadcast"></i></div><h3>Tap &amp; Share</h3><p>Tap a compatible phone—or use the QR code—to open your live profile.</p></article></div>
+        </div>
     </div>
-
-    <div class="row text-center g-4">
-
-        <div class="col-md-4">
-
-            <div class="card border-0 h-100">
-
-                <div class="card-body">
-
-                    <h4>
-                        1. Order
-                    </h4>
-
-                    <p class="text-muted">
-
-                        Choose your NFC business card
-                        and place an order.
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="col-md-4">
-
-            <div class="card border-0 h-100">
-
-                <div class="card-body">
-
-                    <h4>
-                        2. Tap
-                    </h4>
-
-                    <p class="text-muted">
-
-                        Tap the card on an
-                        NFC-enabled smartphone.
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="col-md-4">
-
-            <div class="card border-0 h-100">
-
-                <div class="card-body">
-
-                    <h4>
-                        3. Update Anytime
-                    </h4>
-
-                    <p class="text-muted">
-
-                        Change your profile information
-                        without replacing your card.
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
 </section>
 
+<section class="section-space product-showcase-section">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-5">
+                <div class="eyebrow">NexTap cards</div>
+                <h2 class="section-title">A physical card with a profile that evolves.</h2>
+                <p class="section-copy">Your card keeps one permanent link while your name, title, contact details, and social profiles can be updated from your dashboard.</p>
+                <a href="{% url 'product_list' %}" class="btn btn-dark-soft btn-lg">Browse available cards <i class="bi bi-arrow-up-right"></i></a>
+            </div>
+            <div class="col-lg-7">
+                <div class="showcase-panel">
+                    <div class="showcase-card showcase-card-back"></div>
+                    <div class="showcase-card showcase-card-front">
+                        <div class="brand-lockup mockup-brand"><span class="brand-mark">N</span><span>NexTap</span></div>
+                        <i class="bi bi-wifi"></i>
+                        <div class="showcase-name">Make every introduction count.</div>
+                    </div>
+                    <div class="showcase-detail"><span class="availability-dot"></span>Live products and pricing are available in the card collection.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-space bg-white">
+    <div class="container">
+        <div class="section-heading mx-auto text-center"><div class="eyebrow">Why NexTap</div><h2>Every way to connect, in one reusable card</h2></div>
+        <div class="row g-4 feature-grid">
+            <div class="col-sm-6 col-lg-4"><article class="feature-card h-100"><div class="feature-icon"><i class="bi bi-broadcast-pin"></i></div><h3>Instant NFC sharing</h3><p>Open your live profile with a simple tap on a compatible device.</p></article></div>
+            <div class="col-sm-6 col-lg-4"><article class="feature-card h-100"><div class="feature-icon"><i class="bi bi-qr-code"></i></div><h3>QR fallback</h3><p>A built-in QR code keeps your profile easy to access and share.</p></article></div>
+            <div class="col-sm-6 col-lg-4"><article class="feature-card h-100"><div class="feature-icon"><i class="bi bi-pencil-square"></i></div><h3>Update anytime</h3><p>Edit your profile while the permanent card link stays the same.</p></article></div>
+            <div class="col-sm-6 col-lg-4"><article class="feature-card h-100"><div class="feature-icon"><i class="bi bi-person-plus"></i></div><h3>Save contact</h3><p>Let people download your contact details directly to their phone.</p></article></div>
+            <div class="col-sm-6 col-lg-4"><article class="feature-card h-100"><div class="feature-icon"><i class="bi bi-phone"></i></div><h3>No app needed</h3><p>Your recipient opens a web profile without installing anything.</p></article></div>
+            <div class="col-sm-6 col-lg-4"><article class="feature-card h-100"><div class="feature-icon"><i class="bi bi-arrow-repeat"></i></div><h3>Reusable identity</h3><p>One card can represent your current professional identity for longer.</p></article></div>
+        </div>
+    </div>
+</section>
+
+<section class="section-space">
+    <div class="container">
+        <div class="cta-panel">
+            <div><div class="eyebrow eyebrow-light">Ready when you are</div><h2>Turn your next introduction into a real connection.</h2><p>Create your profile, choose your card, and keep everything you share up to date.</p></div>
+            {% if user.is_authenticated %}<a href="{% url 'product_list' %}" class="btn btn-brand btn-lg">Choose a card</a>{% else %}<a href="{% url 'register' %}" class="btn btn-brand btn-lg">Create your profile</a>{% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="section-space bg-white pt-0">
+    <div class="container faq-wrap">
+        <div class="section-heading text-center mx-auto"><div class="eyebrow">Questions, answered</div><h2>NexTap essentials</h2></div>
+        <div class="accordion premium-accordion" id="homeFaq">
+            <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faqOne">Does the recipient need an app?</button></h3><div id="faqOne" class="accordion-collapse collapse show" data-bs-parent="#homeFaq"><div class="accordion-body">No. Your public NexTap profile opens in the phone's web browser.</div></div></div>
+            <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqTwo">Can I update my details after receiving the card?</button></h3><div id="faqTwo" class="accordion-collapse collapse" data-bs-parent="#homeFaq"><div class="accordion-body">Yes. Your information stays in your online profile, so the physical NFC card does not need to be rewritten.</div></div></div>
+            <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqThree">What if NFC is unavailable?</button></h3><div id="faqThree" class="accordion-collapse collapse" data-bs-parent="#homeFaq"><div class="accordion-body">Your public profile also includes a QR code that can be scanned with a phone camera.</div></div></div>
+            <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqFour">How is my card activated?</button></h3><div id="faqFour" class="accordion-collapse collapse" data-bs-parent="#homeFaq"><div class="accordion-body">After your order is ready, an administrator assigns and activates the physical card for your account.</div></div></div>
+        </div>
+    </div>
+</section>
 {% endblock %}

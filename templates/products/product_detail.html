@@ -1,52 +1,38 @@
 {% extends "base.html" %}
 
-{% block title %}
-{{ product.name }}
-{% endblock %}
-
+{% block title %}{{ product.name }}{% endblock %}
 
 {% block content %}
-
-<div class="row">
-
-    <div class="col-md-6">
-
-        {% if product.image %}
-
-            <img
-                src="{{ product.image.url }}"
-                class="img-fluid rounded shadow-sm"
-                alt="{{ product.name }}"
-            >
-
-        {% endif %}
-
+<section class="page-shell">
+    <div class="container">
+        <a href="{% url 'product_list' %}" class="d-inline-flex align-items-center gap-2 text-muted fw-semibold mb-4"><i class="bi bi-arrow-left"></i>Back to cards</a>
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <div class="product-detail-media">
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                    {% else %}
+                        <div class="product-placeholder-card">
+                            <div class="brand-lockup"><span class="brand-mark">N</span><span>NexTap</span></div>
+                            <span>Tap once. Share everything.</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="eyebrow">Available now</div>
+                <h1 class="section-title mb-3">{{ product.name }}</h1>
+                <div class="product-price mb-3">৳{{ product.price }}</div>
+                <p class="section-copy">{{ product.description|default:"A premium NFC card connected to your editable digital profile."|linebreaksbr }}</p>
+                <ul class="detail-feature-list">
+                    <li><i class="bi bi-check-circle-fill"></i>One physical NFC card per order</li>
+                    <li><i class="bi bi-check-circle-fill"></i>Permanent public profile link</li>
+                    <li><i class="bi bi-check-circle-fill"></i>QR code and contact download included</li>
+                    <li><i class="bi bi-check-circle-fill"></i>Update your profile without rewriting the card</li>
+                </ul>
+                <a href="{% url 'create_order' product.id %}" class="btn btn-primary btn-lg">Order This Card <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
     </div>
-
-
-    <div class="col-md-6">
-
-        <h1>
-            {{ product.name }}
-        </h1>
-
-        <h3 class="my-3">
-            ৳{{ product.price }}
-        </h3>
-
-        <p>
-            {{ product.description }}
-        </p>
-
-        <a
-            href="{% url 'create_order' product.id %}"
-            class="btn btn-success btn-lg"
-        >
-            Order Now
-        </a>
-
-    </div>
-
-</div>
-
+</section>
 {% endblock %}

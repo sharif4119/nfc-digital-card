@@ -1,291 +1,140 @@
 {% extends "base.html" %}
 
-{% block title %}
-Dashboard
-{% endblock %}
-
+{% block title %}Dashboard{% endblock %}
 
 {% block content %}
-
-<div class="mb-4">
-
-    <h1 class="h2">
-        Welcome, {{ user.username }}
-    </h1>
-
-    <p class="text-muted">
-        Manage your digital profile, NFC card, and orders.
-    </p>
-
-</div>
-
-
-<div class="row g-4">
-
-    <!-- PROFILE -->
-
-    <div class="col-lg-4">
-
-        <div class="card shadow-sm h-100">
-
-            <div class="card-body">
-
-                <h5 class="mb-3">
-                    Digital Profile
-                </h5>
-
-                {% if profile and profile.profile_picture %}
-
-                    <img
-                        src="{{ profile.profile_picture.url }}"
-                        class="rounded-circle mb-3"
-                        style="
-                            width: 80px;
-                            height: 80px;
-                            object-fit: cover;
-                        "
-                        alt="Profile photo"
-                    >
-
-                {% endif %}
-
-                <h6>
-                    {% if profile and profile.full_name %}
-                        {{ profile.full_name }}
-                    {% else %}
-                        {{ user.username }}
-                    {% endif %}
-                </h6>
-
-                {% if profile.job_title %}
-                    <p class="text-muted mb-2">
-                        {{ profile.job_title }}
-                    </p>
-                {% endif %}
-
-                <a
-                    href="{% url 'edit_profile' %}"
-                    class="btn btn-primary btn-sm"
-                >
-                    Edit Profile
-                </a>
-
-                <a
-                    href="{% url 'profile_preview' %}"
-                    class="btn btn-outline-secondary btn-sm"
-                >
-                    Preview
-                </a>
-
-            </div>
-
-        </div>
-
+<section class="dashboard-hero">
+    <div class="container">
+        <div class="eyebrow eyebrow-light">Your NexTap account</div>
+        <h1>Welcome back, {{ user.username }}.</h1>
+        <p>Manage your profile, track your card, and keep every connection current.</p>
     </div>
+</section>
 
-
-    <!-- NFC CARD -->
-
-    <div class="col-lg-4">
-
-        <div class="card shadow-sm h-100">
-
-            <div class="card-body">
-
-                <h5 class="mb-3">
-                    My NFC Card
-                </h5>
-
-                {% if card %}
-
-                    <p class="mb-1">
-                        <strong>Card ID:</strong>
-                        {{ card.card_uid }}
-                    </p>
-
-                    <p>
-                        <strong>Status:</strong>
-
-                        {% if card.status == "ACTIVE" %}
-                            <span class="badge bg-success">
-                                Active
-                            </span>
+<section class="dashboard-content">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <article class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <h2>Digital Profile</h2>
+                        <div class="dashboard-icon"><i class="bi bi-person-vcard"></i></div>
+                    </div>
+                    <div class="profile-summary">
+                        {% if profile and profile.profile_picture %}
+                            <img src="{{ profile.profile_picture.url }}" class="profile-summary-photo" alt="{{ profile.full_name|default:user.username }}">
                         {% else %}
-                            <span class="badge bg-secondary">
-                                {{ card.status }}
-                            </span>
+                            <div class="profile-summary-placeholder">{{ user.username|first|upper }}</div>
                         {% endif %}
-                    </p>
+                        <div>
+                            <h3>{% if profile and profile.full_name %}{{ profile.full_name }}{% else %}{{ user.username }}{% endif %}</h3>
+                            <p>{% if profile and profile.job_title %}{{ profile.job_title }}{% else %}Add your professional title{% endif %}</p>
+                        </div>
+                    </div>
 
-                    {% if card.status == "ACTIVE" %}
-
-                        <a
-                            href="{% url 'public_card' card.public_token %}"
-                            class="btn btn-success btn-sm"
-                            target="_blank"
-                        >
-                            Open Card
-                        </a>
-
+                    {% if profile and profile.full_name and profile.phone and profile.email %}
+                        <div class="profile-state"><i class="bi bi-check-circle-fill"></i>Your core profile details are ready.</div>
+                    {% else %}
+                        <div class="profile-state"><i class="bi bi-info-circle-fill"></i>Complete your name, phone, and email to strengthen your profile.</div>
                     {% endif %}
 
-                {% else %}
-
-                    <p class="text-muted">
-                        No NFC card has been assigned yet.
-                    </p>
-
-                    <a
-                        href="{% url 'product_list' %}"
-                        class="btn btn-primary btn-sm"
-                    >
-                        Browse Cards
-                    </a>
-
-                {% endif %}
-
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'edit_profile' %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i>Edit Profile</a>
+                        <a href="{% url 'profile_preview' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-eye"></i>Preview</a>
+                    </div>
+                </article>
             </div>
 
-        </div>
-
-    </div>
-
-
-    <!-- QR -->
-
-    <div class="col-lg-4">
-
-        <div class="card shadow-sm h-100">
-
-            <div class="card-body text-center">
-
-                <h5 class="mb-3">
-                    QR Code
-                </h5>
-
-                {% if card and card.status == "ACTIVE" %}
-
-                    <img
-                        src="{% url 'card_qr' card.public_token %}"
-                        alt="QR Code"
-                        class="img-fluid"
-                        style="max-width: 160px;"
-                    >
-
-                    <p class="small text-muted mt-2">
-                        Scan to open your digital card.
-                    </p>
-
-                {% else %}
-
-                    <p class="text-muted">
-                        QR code will appear after
-                        your NFC card is activated.
-                    </p>
-
-                {% endif %}
-
+            <div class="col-lg-4">
+                <article class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <h2>My NFC Card</h2>
+                        <div class="dashboard-icon"><i class="bi bi-credit-card-2-front"></i></div>
+                    </div>
+                    {% if card %}
+                        <div class="card-meta-list">
+                            <div class="card-meta-row"><span>Card ID</span><strong>{{ card.card_uid }}</strong></div>
+                            <div class="card-meta-row">
+                                <span>Status</span>
+                                <span class="status-pill status-{{ card.status|lower }}">{{ card.status }}</span>
+                            </div>
+                        </div>
+                        {% if card.status == "ACTIVE" %}
+                            <p class="text-muted small">Your card is active and ready to share your live NexTap profile.</p>
+                            <a href="{% url 'public_card' card.public_token %}" class="btn btn-primary btn-sm" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Open Public Card</a>
+                        {% elif card.status == "INACTIVE" %}
+                            <p class="text-muted small">This card is currently inactive. Its public profile is unavailable.</p>
+                        {% elif card.status == "PROGRAMMED" %}
+                            <p class="text-muted small">Your card has been programmed and is awaiting activation.</p>
+                        {% elif card.status == "ASSIGNED" %}
+                            <p class="text-muted small">Your card has been assigned and is being prepared.</p>
+                        {% else %}
+                            <p class="text-muted small">Your card is connected to your account and awaiting activation.</p>
+                        {% endif %}
+                    {% else %}
+                        <div class="empty-state py-3 px-0 text-start">
+                            <div class="empty-state-icon ms-0"><i class="bi bi-credit-card"></i></div>
+                            <h3 class="h5">No card assigned yet</h3>
+                            <p class="mx-0">Choose a NexTap card to begin your order.</p>
+                            <a href="{% url 'product_list' %}" class="btn btn-primary btn-sm">Browse Cards</a>
+                        </div>
+                    {% endif %}
+                </article>
             </div>
 
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- RECENT ORDERS -->
-
-<div class="card shadow-sm mt-4">
-
-    <div class="card-body">
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-
-            <h5 class="mb-0">
-                Recent Orders
-            </h5>
-
-            <a
-                href="{% url 'order_list' %}"
-                class="btn btn-outline-primary btn-sm"
-            >
-                View All
-            </a>
-
-        </div>
-
-        {% if recent_orders %}
-
-            <div class="table-responsive">
-
-                <table class="table align-middle">
-
-                    <thead>
-
-                        <tr>
-                            <th>Order</th>
-                            <th>Product</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th></th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        {% for order in recent_orders %}
-
-                            <tr>
-
-                                <td>
-                                    #{{ order.id }}
-                                </td>
-
-                                <td>
-                                    {{ order.product.name }}
-                                </td>
-
-                                <td>
-                                    ৳{{ order.price }}
-                                </td>
-
-                                <td>
-                                    {{ order.get_order_status_display }}
-                                </td>
-
-                                <td>
-
-                                    <a
-                                        href="{% url 'order_detail' order.id %}"
-                                        class="btn btn-sm btn-outline-secondary"
-                                    >
-                                        View
-                                    </a>
-
-                                </td>
-
-                            </tr>
-
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
-
+            <div class="col-lg-4">
+                <article class="dashboard-card text-center">
+                    <div class="dashboard-card-header text-start">
+                        <h2>Profile QR</h2>
+                        <div class="dashboard-icon"><i class="bi bi-qr-code"></i></div>
+                    </div>
+                    {% if card and card.status == "ACTIVE" %}
+                        <div class="qr-frame"><img src="{% url 'card_qr' card.public_token %}" alt="QR code for your public NexTap profile"></div>
+                        <p class="small text-muted mt-3 mb-0">Scan to open your public digital card.</p>
+                    {% else %}
+                        <div class="empty-state py-3 px-0">
+                            <div class="empty-state-icon"><i class="bi bi-qr-code-scan"></i></div>
+                            <h3 class="h5">QR pending</h3>
+                            <p class="mb-0">Your QR code appears when your NFC card becomes active.</p>
+                        </div>
+                    {% endif %}
+                </article>
             </div>
+        </div>
 
-        {% else %}
-
-            <p class="text-muted mb-0">
-                You haven't placed any orders yet.
-            </p>
-
-        {% endif %}
-
+        <article class="premium-card mt-4">
+            <div class="premium-card-body pb-0">
+                <div class="dashboard-card-header">
+                    <div><div class="card-kicker">Order activity</div><h2 class="h5 mt-1 mb-0">Recent Orders</h2></div>
+                    <a href="{% url 'order_list' %}" class="btn btn-outline-primary btn-sm">View All <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+            {% if recent_orders %}
+                <div class="table-responsive">
+                    <table class="table premium-table align-middle">
+                        <thead><tr><th>Order</th><th>Product</th><th>Total</th><th>Status</th><th></th></tr></thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                                <tr>
+                                    <td><span class="order-number">#{{ order.id }}</span></td>
+                                    <td>{{ order.product.name }}</td>
+                                    <td><strong>৳{{ order.price }}</strong></td>
+                                    <td><span class="status-pill status-{{ order.order_status|lower }}">{{ order.get_order_status_display }}</span></td>
+                                    <td class="text-end"><a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-outline-secondary">View</a></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state pt-2">
+                    <div class="empty-state-icon"><i class="bi bi-bag"></i></div>
+                    <h3>No orders yet</h3>
+                    <p>Your recent NexTap card orders will appear here.</p>
+                    <a href="{% url 'product_list' %}" class="btn btn-primary">Explore Cards</a>
+                </div>
+            {% endif %}
+        </article>
     </div>
-
-</div>
-
+</section>
 {% endblock %}

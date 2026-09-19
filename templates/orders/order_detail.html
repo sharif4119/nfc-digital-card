@@ -1,131 +1,62 @@
 {% extends "base.html" %}
 
-{% block title %}
-Order #{{ order.id }}
-{% endblock %}
-
+{% block title %}Order #{{ order.id }}{% endblock %}
 
 {% block content %}
-
-<div class="row justify-content-center">
-
-    <div class="col-lg-7">
-
-        <div class="card shadow-sm">
-
-            <div class="card-body p-4">
-
-                <h2>
-                    Order #{{ order.id }}
-                </h2>
-
-                <hr>
-
-                <p>
-                    <strong>Product:</strong>
-                    {{ order.product.name }}
-                </p>
-
-                <p>
-                    <strong>Quantity:</strong>
-                    {{ order.quantity }}
-                </p>
-
-                <p>
-                    <strong>Total:</strong>
-                    ৳{{ order.price }}
-                </p>
-
-                <p>
-                    <strong>Name:</strong>
-                    {{ order.customer_name }}
-                </p>
-
-                <p>
-                    <strong>Phone:</strong>
-                    {{ order.phone }}
-                </p>
-
-                <p>
-                    <strong>Address:</strong>
-                    {{ order.address }},
-                    {{ order.city }}
-                </p>
-
-                <p>
-                    <strong>Payment:</strong>
-                    {{ order.payment_status }}
-                </p>
-
-                <p>
-                    <strong>Order Status:</strong>
-                    {{ order.get_order_status_display }}
-                </p>
-                
-                {% if order.assigned_card %}
-
-                    <hr>
-
-                    <div class="alert alert-success">
-
-                        <h5>
-                            NFC Card Assigned
-                        </h5>
-
-                        <p class="mb-2">
-                            <strong>Card:</strong>
-                            {{ order.assigned_card.card_uid }}
-                        </p>
-
-                        <p class="mb-3">
-                            <strong>Status:</strong>
-                            {{ order.assigned_card.status }}
-                        </p>
-
-                        <a
-                            href="{% url 'public_card' order.assigned_card.public_token %}"
-                            class="btn btn-success"
-                            target="_blank"
-                        >
-                            Open Digital Card
-                        </a>
-
-                    </div>
-
-                {% else %}
-
-                    <div class="alert alert-secondary">
-
-                        Your NFC card has not been assigned yet.
-
-                    </div>
-
-                {% endif %}
-
-                {% if order.payment_status != "PAID" %}
-
-                    <div class="alert alert-info mt-3">
-
-                        Online payment will be available after deployment.
-
-                    </div>
-
-                {% else %}
-
-                    <div class="alert alert-success mt-3">
-
-                        Payment completed successfully.
-
-                    </div>
-
-                {% endif %}
-
-            </div>
-
+<section class="page-shell">
+    <div class="container">
+        <a href="{% url 'order_list' %}" class="d-inline-flex align-items-center gap-2 text-muted fw-semibold mb-4"><i class="bi bi-arrow-left"></i>Back to orders</a>
+        <div class="page-heading">
+            <div><div class="eyebrow">Order summary</div><h1>Order #{{ order.id }}</h1><p>Review your product, delivery details, payment state, and NFC card assignment.</p></div>
+            <span class="status-pill status-{{ order.order_status|lower }}">{{ order.get_order_status_display }}</span>
         </div>
 
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <article class="premium-card">
+                    <div class="premium-card-body">
+                        <div class="d-flex align-items-center gap-3 mb-4"><div class="dashboard-icon"><i class="bi bi-receipt"></i></div><div><div class="card-kicker">Order details</div><h2 class="h5 fw-bold mb-0">{{ order.product.name }}</h2></div></div>
+                        <div class="order-detail-grid">
+                            <div class="detail-item"><span>Quantity</span><strong>{{ order.quantity }}</strong></div>
+                            <div class="detail-item"><span>Total</span><strong>৳{{ order.price }}</strong></div>
+                            <div class="detail-item"><span>Customer</span><strong>{{ order.customer_name }}</strong></div>
+                            <div class="detail-item"><span>Phone</span><strong>{{ order.phone }}</strong></div>
+                            <div class="detail-item detail-item-wide"><span>Delivery address</span><strong>{{ order.address }}, {{ order.city }}</strong></div>
+                            <div class="detail-item"><span>Payment</span><strong>{{ order.payment_status }}</strong></div>
+                            <div class="detail-item"><span>Order status</span><strong>{{ order.get_order_status_display }}</strong></div>
+                        </div>
+
+                        {% if order.payment_status != "PAID" %}
+                            <div class="notice-box notice-info"><i class="bi bi-info-circle-fill"></i><span>Online payment will be available after deployment.</span></div>
+                        {% else %}
+                            <div class="notice-box notice-success"><i class="bi bi-check-circle-fill"></i><span>Payment completed successfully.</span></div>
+                        {% endif %}
+                    </div>
+                </article>
+            </div>
+
+            <div class="col-lg-5">
+                <article class="premium-card">
+                    <div class="premium-card-body">
+                        <div class="d-flex align-items-center gap-3 mb-4"><div class="dashboard-icon"><i class="bi bi-credit-card-2-front"></i></div><div><div class="card-kicker">Physical card</div><h2 class="h5 fw-bold mb-0">NFC assignment</h2></div></div>
+                        {% if order.assigned_card %}
+                            <div class="card-meta-list">
+                                <div class="card-meta-row"><span>Card ID</span><strong>{{ order.assigned_card.card_uid }}</strong></div>
+                                <div class="card-meta-row"><span>Status</span><span class="status-pill status-{{ order.assigned_card.status|lower }}">{{ order.assigned_card.status }}</span></div>
+                            </div>
+                            {% if order.assigned_card.status == "ACTIVE" %}
+                                <div class="notice-box notice-success"><i class="bi bi-check-circle-fill"></i><span>Your NFC card is active and linked to your profile.</span></div>
+                                <a href="{% url 'public_card' order.assigned_card.public_token %}" class="btn btn-primary w-100 mt-3" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Open Digital Card</a>
+                            {% else %}
+                                <div class="notice-box notice-info"><i class="bi bi-hourglass-split"></i><span>Your assigned card is being prepared.</span></div>
+                            {% endif %}
+                        {% else %}
+                            <div class="notice-box notice-muted mt-0"><i class="bi bi-clock"></i><span>Your NFC card has not been assigned yet.</span></div>
+                        {% endif %}
+                    </div>
+                </article>
+            </div>
+        </div>
     </div>
-
-</div>
-
+</section>
 {% endblock %}

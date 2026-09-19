@@ -1,32 +1,5 @@
 {% extends "base.html" %}
-
-{% block title %}
-Payment Successful
-{% endblock %}
-
+{% block title %}Payment Successful{% endblock %}
 {% block content %}
-
-<div class="text-center py-5">
-
-    <h1>Payment Successful</h1>
-
-    <p>
-        Your sandbox payment for
-        Order #{{ order.id }}
-        was verified successfully.
-    </p>
-
-    <h4>
-        ৳{{ payment.amount }}
-    </h4>
-
-    <a
-        href="{% url 'order_detail' order.id %}"
-        class="btn btn-primary mt-3"
-    >
-        View Order
-    </a>
-
-</div>
-
+<section class="page-shell"><div class="container"><article class="premium-card result-shell result-success"><div class="result-icon"><i class="bi bi-check-lg"></i></div><div class="eyebrow">Payment verified</div><h1 class="h2 fw-bold">Payment successful</h1><p class="text-muted">Your sandbox payment for Order #{{ order.id }} was verified successfully.</p><div class="product-price my-4">৳{{ payment.amount }}</div><a href="{% url 'order_detail' order.id %}" class="btn btn-primary">View Order</a></article></div></section>
 {% endblock %}

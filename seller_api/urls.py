@@ -35,6 +35,12 @@ urlpatterns = [
     ),
 
     path(
+        "orders/<int:order_id>/prepare-card/",
+        views.prepare_card,
+        name="seller_api_prepare_card",
+    ),
+
+    path(
         "cards/available/",
         views.available_cards,
         name="seller_api_available_cards",

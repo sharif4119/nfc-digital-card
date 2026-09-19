@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -194,6 +195,78 @@ def assign_card(request, order_id):
             context={"request": request},
         ).data
     )
+
+
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def prepare_card(request, order_id):
+    with transaction.atomic():
+        order = get_object_or_404(
+            Order.objects.select_for_update().select_related(
+                "user",
+                "product",
+                "assigned_card",
+            ),
+            id=order_id,
+        )
+
+        # Returning the existing assignment makes seller-app retries safe.
+        if order.assigned_card_id:
+            return Response(
+                OrderSerializer(
+                    order,
+                    context={"request": request},
+                ).data
+            )
+
+        conflicting_card = (
+            NFCCard.objects.select_for_update()
+            .filter(owner=order.user)
+            .exclude(status="INACTIVE")
+            .first()
+        )
+
+        if conflicting_card:
+            return Response(
+                {
+                    "detail": (
+                        "This customer already has a non-inactive NFC card "
+                        "assigned to another order."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Inactive cards no longer occupy the customer's single-card slot.
+        NFCCard.objects.select_for_update().filter(
+            owner=order.user,
+            status="INACTIVE",
+        ).update(owner=None)
+
+        card = NFCCard.create_with_generated_uid(
+            owner=order.user,
+            status="ASSIGNED",
+            programmed_at=None,
+            programmed_by=None,
+            activated_at=None,
+        )
+
+        order.assigned_card = card
+        order.order_status = "CARD_ASSIGNED"
+        order.save(
+            update_fields=[
+                "assigned_card",
+                "order_status",
+            ]
+        )
+
+        return Response(
+            OrderSerializer(
+                order,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_200_OK,
+        )
 
 
 @api_view(["GET"])

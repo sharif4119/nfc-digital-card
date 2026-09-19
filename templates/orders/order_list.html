@@ -1,96 +1,43 @@
 {% extends "base.html" %}
 
-{% block title %}
-My Orders
-{% endblock %}
-
+{% block title %}My Orders{% endblock %}
 
 {% block content %}
+<section class="page-shell">
+    <div class="container">
+        <div class="page-heading">
+            <div><div class="eyebrow">Account activity</div><h1>My Orders</h1><p>Track your NexTap card order and card-assignment status.</p></div>
+            <a href="{% url 'product_list' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i>Order a Card</a>
+        </div>
 
-<h1 class="mb-4">
-    My Orders
-</h1>
-
-<div class="card shadow-sm">
-
-    <div class="card-body">
-
-        {% if orders %}
-
-            <div class="table-responsive">
-
-                <table class="table align-middle">
-
-                    <thead>
-
-                        <tr>
-                            <th>Order</th>
-                            <th>Product</th>
-                            <th>Total</th>
-                            <th>Payment</th>
-                            <th>Status</th>
-                            <th></th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        {% for order in orders %}
-
-                            <tr>
-
-                                <td>
-                                    #{{ order.id }}
-                                </td>
-
-                                <td>
-                                    {{ order.product.name }}
-                                </td>
-
-                                <td>
-                                    ৳{{ order.price }}
-                                </td>
-
-                                <td>
-                                    {{ order.payment_status }}
-                                </td>
-
-                                <td>
-                                    {{ order.get_order_status_display }}
-                                </td>
-
-                                <td>
-
-                                    <a
-                                        href="{% url 'order_detail' order.id %}"
-                                        class="btn btn-sm btn-outline-primary"
-                                    >
-                                        View
-                                    </a>
-
-                                </td>
-
-                            </tr>
-
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        {% else %}
-
-            <p class="mb-0">
-                You haven't placed any orders yet.
-            </p>
-
-        {% endif %}
-
+        <article class="premium-card">
+            {% if orders %}
+                <div class="table-responsive">
+                    <table class="table premium-table align-middle">
+                        <thead><tr><th>Order</th><th>Product</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead>
+                        <tbody>
+                            {% for order in orders %}
+                                <tr>
+                                    <td><span class="order-number">#{{ order.id }}</span></td>
+                                    <td><strong>{{ order.product.name }}</strong></td>
+                                    <td>৳{{ order.price }}</td>
+                                    <td><span class="status-pill status-{{ order.payment_status|lower }}">{{ order.payment_status }}</span></td>
+                                    <td><span class="status-pill status-{{ order.order_status|lower }}">{{ order.get_order_status_display }}</span></td>
+                                    <td class="text-end"><a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-outline-primary">View Details</a></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="bi bi-bag"></i></div>
+                    <h2>No orders yet</h2>
+                    <p>Choose a card from the NexTap collection to place your first order.</p>
+                    <a href="{% url 'product_list' %}" class="btn btn-primary">Browse Cards</a>
+                </div>
+            {% endif %}
+        </article>
     </div>
-
-</div>
-
+</section>
 {% endblock %}
