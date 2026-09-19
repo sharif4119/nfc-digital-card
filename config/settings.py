@@ -93,6 +93,11 @@ INSTALLED_APPS = [
     "products",
     "orders",
     "payments",
+    
+    "rest_framework",
+    "rest_framework.authtoken",
+
+    "seller_api",
 ]
 
 MIDDLEWARE = [
@@ -254,6 +259,15 @@ else:
             },
         },
     }
+    
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}    
     
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False

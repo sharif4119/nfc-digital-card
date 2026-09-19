@@ -143,7 +143,7 @@ class OrderAdminCardAssignmentTests(TestCase):
             "/admin/orders/order/"
         )
 
-    def test_assigning_card_activates_and_links_owner(self):
+    def test_assigning_card_marks_assigned_and_links_owner(self):
         self.order.assigned_card = self.card
 
         self.order_admin.save_model(
@@ -165,8 +165,11 @@ class OrderAdminCardAssignmentTests(TestCase):
             "CARD_ASSIGNED",
         )
         self.assertEqual(self.card.owner, self.user)
-        self.assertEqual(self.card.status, "ACTIVE")
-        self.assertIsNotNone(self.card.activated_at)
+        self.assertEqual(self.card.status, "ASSIGNED")
+        self.assertIsNone(self.card.programmed_at)
+        self.assertIsNone(self.card.programmed_by)
+        self.assertIsNone(self.card.activated_at)
+       
 
     def test_removing_card_resets_unpaid_order_to_pending(self):
         self.order.assigned_card = self.card

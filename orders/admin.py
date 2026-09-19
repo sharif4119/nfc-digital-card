@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.utils import timezone
+
 
 from cards.models import NFCCard
 from .models import Order
@@ -94,6 +94,7 @@ class OrderAdmin(admin.ModelAdmin):
 
             queryset = NFCCard.objects.filter(
                 owner__isnull=True,
+                status="UNASSIGNED",
             )
 
             if object_id:
@@ -145,32 +146,38 @@ class OrderAdmin(admin.ModelAdmin):
 
         new_card = obj.assigned_card
 
-        # Release the old card if admin changed assignment.
+        # Release old card if assignment changed or removed.
         if previous_card and previous_card != new_card:
             previous_card.owner = None
             previous_card.status = "UNASSIGNED"
+            previous_card.programmed_at = None
+            previous_card.programmed_by = None
             previous_card.activated_at = None
 
             previous_card.save(
                 update_fields=[
                     "owner",
                     "status",
+                    "programmed_at",
+                    "programmed_by",
                     "activated_at",
                 ]
             )
 
-        # Activate the newly assigned card.
+        # Newly assigned card should only become ASSIGNED.
         if new_card:
             new_card.owner = obj.user
-            new_card.status = "ACTIVE"
-
-            if not new_card.activated_at:
-                new_card.activated_at = timezone.now()
+            new_card.status = "ASSIGNED"
+            new_card.programmed_at = None
+            new_card.programmed_by = None
+            new_card.activated_at = None
 
             new_card.save(
                 update_fields=[
                     "owner",
                     "status",
+                    "programmed_at",
+                    "programmed_by",
                     "activated_at",
                 ]
             )
@@ -183,6 +190,8 @@ class OrderAdmin(admin.ModelAdmin):
                         "order_status",
                     ]
                 )
+
+        # Card assignment removed completely.
         elif (
             previous_card
             and obj.order_status == "CARD_ASSIGNED"
@@ -198,3 +207,4 @@ class OrderAdmin(admin.ModelAdmin):
                     "order_status",
                 ]
             )
+            

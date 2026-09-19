@@ -10,9 +10,11 @@ def generate_public_token():
 
 class NFCCard(models.Model):
     STATUS_CHOICES = [
-        ("UNASSIGNED", "Unassigned"),
-        ("ACTIVE", "Active"),
-        ("INACTIVE", "Inactive"),
+    ("UNASSIGNED", "Unassigned"),
+    ("ASSIGNED", "Assigned"),
+    ("PROGRAMMED", "Programmed"),
+    ("ACTIVE", "Active"),
+    ("INACTIVE", "Inactive"),
     ]
 
     card_uid = models.CharField(
@@ -40,7 +42,19 @@ class NFCCard(models.Model):
         choices=STATUS_CHOICES,
         default="UNASSIGNED",
     )
+    programmed_at = models.DateTimeField(
+    null=True,
+    blank=True,
+    )
 
+    programmed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="programmed_nfc_cards",
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     activated_at = models.DateTimeField(
         null=True,
