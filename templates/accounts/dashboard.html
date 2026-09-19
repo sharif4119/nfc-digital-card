@@ -89,6 +89,19 @@ Dashboard
         >
             View Public Card
         </a>
+        <div class="mt-4">
+
+    <h6>
+        Your QR Code
+    </h6>
+
+    <img
+        src="{% url 'card_qr' card.public_token %}"
+        alt="QR Code"
+        style="max-width: 180px;"
+    >
+
+    </div>
 
     {% endif %}
 
