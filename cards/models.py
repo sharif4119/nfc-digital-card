@@ -69,7 +69,18 @@ class NFCCard(models.Model):
                 card_uid=f"PENDING-{secrets.token_hex(12)}",
                 **kwargs,
             )
-            sequence = card.pk
+            generated_uids = (
+                cls.objects.select_for_update()
+                .filter(card_uid__startswith="NXT-")
+                .exclude(pk=card.pk)
+                .values_list("card_uid", flat=True)
+            )
+            used_numbers = [
+                int(uid[4:])
+                for uid in generated_uids
+                if len(uid) == 10 and uid[4:].isdigit()
+            ]
+            sequence = max(used_numbers, default=0) + 1
 
             while sequence <= 999999:
                 candidate = f"NXT-{sequence:06d}"
