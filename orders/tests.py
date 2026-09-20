@@ -52,9 +52,25 @@ class OrderFlowTests(TestCase):
         self.assertContains(response, "Order #")
         self.assertContains(
             response,
-            "Online payment will be available after deployment.",
+            "Payment and confirmation will be handled by the seller.",
         )
         self.assertNotContains(response, "Pay Now")
+
+    def test_logged_out_user_cannot_order(self):
+        response = self.client.get(
+            reverse(
+                "create_order",
+                args=[self.product.pk],
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            (
+                f"{reverse('login')}?next="
+                f"{reverse('create_order', args=[self.product.pk])}"
+            ),
+        )
 
     def test_another_user_cannot_access_order(self):
         self.client.force_login(self.other_user)
@@ -101,6 +117,45 @@ class OrderFlowTests(TestCase):
             created_order.price,
             self.product.price,
         )
+
+    def test_logged_in_user_can_submit_unpaid_pending_order(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse(
+                "create_order",
+                args=[self.product.pk],
+            ),
+            {
+                "customer_name": "Demo Customer",
+                "phone": "01711111111",
+                "address": "Demo address",
+                "city": "Dhaka",
+            },
+            follow=True,
+        )
+
+        created_order = Order.objects.exclude(
+            pk=self.order.pk
+        ).get()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.request["PATH_INFO"],
+            reverse("order_detail", args=[created_order.pk]),
+        )
+        self.assertEqual(created_order.payment_status, "UNPAID")
+        self.assertEqual(created_order.order_status, "PENDING")
+        self.assertContains(
+            response,
+            (
+                "Order submitted successfully. Payment and confirmation "
+                "will be handled by the seller."
+            ),
+        )
+        self.assertNotContains(response, "Pay Now")
+        self.assertNotContains(response, "Checkout")
+        self.assertNotContains(response, "SSLCOMMERZ")
 
     def test_payment_routes_are_not_publicly_included(self):
         self.client.force_login(self.user)

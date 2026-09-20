@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 
 from products.models import Product
@@ -25,8 +26,18 @@ def create_order(request, product_id):
             order.product = product
             order.quantity = 1
             order.price = product.price
+            order.payment_status = "UNPAID"
+            order.order_status = "PENDING"
 
             order.save()
+
+            messages.success(
+                request,
+                (
+                    "Order submitted successfully. Payment and confirmation "
+                    "will be handled by the seller."
+                ),
+            )
 
             return redirect(
                 "order_detail",

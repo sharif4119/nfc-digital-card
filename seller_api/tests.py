@@ -64,6 +64,8 @@ class PrepareCardAPITests(APITestCase):
     def test_staff_can_prepare_and_link_card(self):
         self.authenticate_staff()
 
+        self.assertEqual(self.order.payment_status, "UNPAID")
+
         response = self.client.post(self.prepare_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
