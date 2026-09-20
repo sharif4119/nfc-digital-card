@@ -14,14 +14,40 @@
                 <div class="col-md-6 col-xl-4">
                     <article class="product-grid-card">
                         <div class="product-media">
-                            {% if product.image %}
-                                <img src="{{ product.image.url }}" alt="{{ product.name }}">
-                            {% else %}
-                                <div class="product-placeholder-card">
-                                    <div class="brand-lockup"><span class="brand-mark">N</span><span>NexTap</span></div>
-                                    <span>Tap once. Share everything.</span>
-                                </div>
-                            {% endif %}
+                            <div class="product-image-wrap">
+                                {% if product.image %}
+                                    <img
+                                        src="{{ product.image.url }}"
+                                        alt="{{ product.name }}"
+                                        class="product-image"
+                                        onerror="
+                                            this.style.display='none';
+                                            this.nextElementSibling.style.display='flex';
+                                        "
+                                    >
+
+                                    <div
+                                        class="product-placeholder-card"
+                                        style="display:none;"
+                                    >
+                                        <div class="brand-lockup">
+                                            <span class="brand-mark">N</span>
+                                            <span>NexTap</span>
+                                        </div>
+
+                                        <span>Tap once. Share everything.</span>
+                                    </div>
+                                {% else %}
+                                    <div class="product-placeholder-card">
+                                        <div class="brand-lockup">
+                                            <span class="brand-mark">N</span>
+                                            <span>NexTap</span>
+                                        </div>
+
+                                        <span>Tap once. Share everything.</span>
+                                    </div>
+                                {% endif %}
+                            </div>
                             <span class="availability-badge"><span class="availability-dot"></span>Available</span>
                         </div>
                         <div class="product-card-content">
