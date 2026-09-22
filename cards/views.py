@@ -47,11 +47,7 @@ def card_qr_view(request, token):
         status="ACTIVE",
     )
 
-    public_url = request.build_absolute_uri(
-        f"/c/{card.public_token}/"
-    )
-
-    qr = qrcode.make(public_url)
+    qr = qrcode.make(card.public_url)
 
     buffer = io.BytesIO()
     qr.save(buffer, format="PNG")

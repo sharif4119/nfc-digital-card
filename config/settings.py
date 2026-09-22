@@ -202,6 +202,11 @@ STORAGES = {
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+PUBLIC_BASE_URL = os.getenv(
+    "PUBLIC_BASE_URL",
+    "https://nextap.pythonanywhere.com",
+).rstrip("/")
+
 SSLCOMMERZ_STORE_ID = os.getenv(
     "SSLCOMMERZ_STORE_ID",
     "",

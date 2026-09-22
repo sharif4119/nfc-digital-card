@@ -53,6 +53,12 @@ urlpatterns = [
     ),
 
     path(
+        "cards/<int:card_id>/print/",
+        views.card_print_pdf,
+        name="seller_api_card_print_pdf",
+    ),
+
+    path(
         "cards/<int:card_id>/programmed/",
         views.mark_programmed,
         name="seller_api_programmed",

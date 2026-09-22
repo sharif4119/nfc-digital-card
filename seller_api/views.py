@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -12,6 +13,7 @@ from rest_framework.response import Response
 from cards.models import NFCCard
 from orders.models import Order
 
+from .print_design import build_card_print_pdf
 from .serializers import NFCCardSerializer, OrderSerializer
 
 
@@ -283,6 +285,30 @@ def card_detail(request, card_id):
             context={"request": request},
         ).data
     )
+
+
+@api_view(["GET"])
+@permission_classes([IsAdminUser])
+def card_print_pdf(request, card_id):
+    card = get_object_or_404(
+        NFCCard,
+        id=card_id,
+        status__in=[
+            "ASSIGNED",
+            "PROGRAMMED",
+            "ACTIVE",
+        ],
+    )
+    pdf = build_card_print_pdf(card.public_url)
+    filename = f"NexTap-{card.card_uid}-front-back.pdf"
+    response = HttpResponse(
+        pdf,
+        content_type="application/pdf",
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="{filename}"'
+    )
+    return response
 
 
 @api_view(["POST"])

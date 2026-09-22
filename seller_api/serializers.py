@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.urls import reverse
 from rest_framework import serializers
 
 from cards.models import NFCCard
@@ -5,12 +7,19 @@ from orders.models import Order
 
 
 class NFCCardSerializer(serializers.ModelSerializer):
+    PRINTABLE_STATUSES = {
+        "ASSIGNED",
+        "PROGRAMMED",
+        "ACTIVE",
+    }
+
     owner_username = serializers.CharField(
         source="owner.username",
         read_only=True,
     )
 
     public_url = serializers.SerializerMethodField()
+    print_pdf_url = serializers.SerializerMethodField()
 
     class Meta:
         model = NFCCard
@@ -19,6 +28,7 @@ class NFCCardSerializer(serializers.ModelSerializer):
             "card_uid",
             "public_token",
             "public_url",
+            "print_pdf_url",
             "status",
             "owner",
             "owner_username",
@@ -29,14 +39,22 @@ class NFCCardSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_public_url(self, obj):
-        request = self.context.get("request")
+        return obj.public_url
 
-        path = f"/c/{obj.public_token}/"
+    def get_print_pdf_url(self, obj):
+        path = reverse(
+            "seller_api_card_print_pdf",
+            kwargs={"card_id": obj.id},
+        )
+        return f"{settings.PUBLIC_BASE_URL.rstrip('/')}" f"{path}"
 
-        if request:
-            return request.build_absolute_uri(path)
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
 
-        return path
+        if instance.status not in self.PRINTABLE_STATUSES:
+            data.pop("print_pdf_url", None)
+
+        return data
 
 
 class OrderSerializer(serializers.ModelSerializer):

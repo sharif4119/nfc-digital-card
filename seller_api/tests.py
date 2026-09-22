@@ -1,14 +1,20 @@
 from decimal import Decimal
+from unittest.mock import patch
 
+import qrcode
 from django.contrib.auth.models import User
 from django.test import Client
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from cards.models import NFCCard
 from orders.models import Order
 from products.models import Product
+
+from .print_design import CR80_SIZE, build_card_print_images
 
 
 class PrepareCardAPITests(APITestCase):
@@ -85,7 +91,7 @@ class PrepareCardAPITests(APITestCase):
         self.assertEqual(card_data["owner_username"], self.customer.username)
         self.assertEqual(
             card_data["public_url"],
-            f"http://testserver/c/{card.public_token}/",
+            card.public_url,
         )
 
     def test_generated_card_uids_are_unique(self):
@@ -200,3 +206,184 @@ class PrepareCardAPITests(APITestCase):
         card.status = "ACTIVE"
         card.save(update_fields=["status"])
         self.assertEqual(public_client.get(public_url).status_code, 200)
+
+
+@override_settings(
+    PUBLIC_BASE_URL="https://nextap.pythonanywhere.com"
+)
+class CardPrintPDFAPITests(APITestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            username="print-seller",
+            password="test-pass-123",
+            is_staff=True,
+        )
+        self.customer = User.objects.create_user(
+            username="print-customer",
+            password="test-pass-123",
+        )
+        self.card = NFCCard.objects.create(
+            card_uid="NXT-PRINT-001",
+            owner=self.customer,
+            status="ASSIGNED",
+        )
+        self.product = Product.objects.create(
+            name="Printable NexTap Card",
+            price=Decimal("1200.00"),
+            is_available=True,
+        )
+        self.order = Order.objects.create(
+            user=self.customer,
+            product=self.product,
+            assigned_card=self.card,
+            quantity=1,
+            price=self.product.price,
+            customer_name="Print Customer",
+            phone="01700000000",
+            address="Test address",
+            city="Dhaka",
+            order_status="CARD_ASSIGNED",
+        )
+        self.print_url = reverse(
+            "seller_api_card_print_pdf",
+            kwargs={"card_id": self.card.id},
+        )
+        self.card_detail_url = reverse(
+            "seller_api_card_detail",
+            kwargs={"card_id": self.card.id},
+        )
+        self.order_detail_url = reverse(
+            "seller_api_order_detail",
+            kwargs={"order_id": self.order.id},
+        )
+
+    def test_print_pdf_requires_authentication(self):
+        response = self.client.get(self.print_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_print_pdf_requires_staff_user(self):
+        self.client.force_authenticate(user=self.customer)
+
+        response = self.client.get(self.print_url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_receives_downloadable_front_back_pdf(self):
+        token = Token.objects.create(user=self.staff)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Token {token.key}"
+        )
+
+        response = self.client.get(self.print_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertEqual(
+            response["Content-Disposition"],
+            (
+                'attachment; filename="NexTap-NXT-PRINT-001-'
+                'front-back.pdf"'
+            ),
+        )
+        self.assertTrue(response.content.startswith(b"%PDF"))
+        self.assertEqual(
+            response.content.count(
+                b"/MediaBox [ 0 0 242.64 153.12 ]"
+            ),
+            2,
+        )
+
+    def test_card_detail_exposes_canonical_print_pdf_url(self):
+        self.client.force_authenticate(user=self.staff)
+
+        response = self.client.get(self.card_detail_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["print_pdf_url"],
+            (
+                "https://nextap.pythonanywhere.com"
+                f"/api/seller/cards/{self.card.id}/print/"
+            ),
+        )
+
+    def test_order_detail_contains_nested_print_pdf_url(self):
+        self.client.force_authenticate(user=self.staff)
+
+        response = self.client.get(self.order_detail_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["assigned_card"]["print_pdf_url"],
+            (
+                "https://nextap.pythonanywhere.com"
+                f"/api/seller/cards/{self.card.id}/print/"
+            ),
+        )
+
+    def test_print_pdf_url_is_available_for_each_supported_status(self):
+        self.client.force_authenticate(user=self.staff)
+
+        for card_status in ("ASSIGNED", "PROGRAMMED", "ACTIVE"):
+            with self.subTest(card_status=card_status):
+                self.card.status = card_status
+                self.card.save(update_fields=["status"])
+
+                response = self.client.get(self.card_detail_url)
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertIn("print_pdf_url", response.data)
+
+    def test_print_pdf_url_is_omitted_for_unsupported_statuses(self):
+        self.client.force_authenticate(user=self.staff)
+
+        for card_status in ("UNASSIGNED", "INACTIVE"):
+            with self.subTest(card_status=card_status):
+                self.card.status = card_status
+                self.card.save(update_fields=["status"])
+
+                response = self.client.get(self.card_detail_url)
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertNotIn("print_pdf_url", response.data)
+
+    def test_print_design_uses_cr80_dimensions_at_300_dpi(self):
+        front, back = build_card_print_images(self.card.public_url)
+
+        self.assertEqual(CR80_SIZE, (1011, 638))
+        self.assertEqual(front.size, CR80_SIZE)
+        self.assertEqual(back.size, CR80_SIZE)
+
+    def test_qr_uses_exact_canonical_card_public_url(self):
+        self.client.force_authenticate(user=self.staff)
+
+        with patch(
+            "seller_api.print_design.qrcode.make",
+            wraps=qrcode.make,
+        ) as make_qr:
+            response = self.client.get(self.print_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.card.public_url,
+            (
+                "https://nextap.pythonanywhere.com"
+                f"/c/{self.card.public_token}/"
+            ),
+        )
+        make_qr.assert_called_once_with(self.card.public_url)
+
+    def test_printing_supports_lifecycle_status_without_mutation(self):
+        self.client.force_authenticate(user=self.staff)
+
+        for card_status in ("ASSIGNED", "PROGRAMMED", "ACTIVE"):
+            with self.subTest(card_status=card_status):
+                self.card.status = card_status
+                self.card.save(update_fields=["status"])
+
+                response = self.client.get(self.print_url)
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.card.refresh_from_db()
+                self.assertEqual(self.card.status, card_status)

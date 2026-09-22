@@ -1,5 +1,6 @@
 import secrets
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import IntegrityError, models, transaction
 
@@ -97,6 +98,13 @@ class NFCCard(models.Model):
                 return card
 
             raise RuntimeError("The automatic NFC card UID range is exhausted.")
+
+    @property
+    def public_url(self):
+        return (
+            f"{settings.PUBLIC_BASE_URL}"
+            f"/c/{self.public_token}/"
+        )
 
     def __str__(self):
         return f"{self.card_uid} - {self.status}"
