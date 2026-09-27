@@ -6,7 +6,7 @@
 <section class="dashboard-hero">
     <div class="container">
         <div class="eyebrow eyebrow-light">Your NexTap account</div>
-        <h1>Welcome back, {{ user.username }}.</h1>
+        <h1>Welcome back, {% if profile %}{{ profile.account_name }}{% else %}{{ user.username }}{% endif %}.</h1>
         <p>Manage your profile, track your card, and keep every connection current.</p>
     </div>
 </section>
@@ -22,12 +22,12 @@
                     </div>
                     <div class="profile-summary">
                         {% if profile and profile.profile_picture %}
-                            <img src="{{ profile.profile_picture.url }}" class="profile-summary-photo" alt="{{ profile.full_name|default:user.username }}">
+                            <img src="{{ profile.profile_picture.url }}" class="profile-summary-photo" alt="{{ profile.public_name }}">
                         {% else %}
-                            <div class="profile-summary-placeholder">{{ user.username|first|upper }}</div>
+                            <div class="profile-summary-placeholder">{% if profile %}{{ profile.public_name|first|upper }}{% else %}{{ user.username|first|upper }}{% endif %}</div>
                         {% endif %}
                         <div>
-                            <h3>{% if profile and profile.full_name %}{{ profile.full_name }}{% else %}{{ user.username }}{% endif %}</h3>
+                            <h3>{% if profile %}{{ profile.public_name }}{% else %}{{ user.username }}{% endif %}</h3>
                             <p>{% if profile and profile.job_title %}{{ profile.job_title }}{% else %}Add your professional title{% endif %}</p>
                         </div>
                     </div>

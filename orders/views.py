@@ -45,15 +45,20 @@ def create_order(request, product_id):
             )
 
     else:
+        profile = getattr(request.user, "profile", None)
         initial = {
             "customer_name": (
-                request.user.profile.full_name
-                if hasattr(request.user, "profile")
+                (
+                    profile.full_name
+                    or profile.display_username
+                    or request.user.username
+                )
+                if profile
                 else request.user.username
             ),
             "phone": (
-                request.user.profile.phone
-                if hasattr(request.user, "profile")
+                profile.phone
+                if profile
                 else ""
             ),
         }

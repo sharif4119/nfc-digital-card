@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ profile.full_name|default:card.owner.username }}{% endblock %}
+{% block title %}{{ profile.public_name }}{% endblock %}
 {% block body_class %}public-profile-page{% endblock %}
 
 {% block site_header %}
@@ -18,13 +18,13 @@
             <div class="profile-cover"></div>
             <div class="profile-content">
                 {% if profile.profile_picture %}
-                    <img src="{{ profile.profile_picture.url }}" alt="{{ profile.full_name|default:card.owner.username }}" class="public-profile-photo">
+                    <img src="{{ profile.profile_picture.url }}" alt="{{ profile.public_name }}" class="public-profile-photo">
                 {% else %}
-                    <div class="public-profile-placeholder">{{ profile.full_name|default:card.owner.username|first|upper }}</div>
+                    <div class="public-profile-placeholder">{{ profile.public_name|first|upper }}</div>
                 {% endif %}
 
                 <div class="profile-identity">
-                    <h1>{{ profile.full_name|default:card.owner.username }}</h1>
+                    <h1>{{ profile.public_name }}</h1>
                     {% if profile.job_title or profile.company %}
                         <p class="profile-role">
                             {% if profile.job_title %}{{ profile.job_title }}{% endif %}
@@ -62,7 +62,7 @@
                     <div class="profile-qr-panel">
                         <strong>Scan to open this profile</strong>
                         <p class="small text-muted mb-0">Use your phone camera when NFC isn't available.</p>
-                        <img src="{% url 'card_qr' card.public_token %}" alt="QR code for {{ profile.full_name|default:card.owner.username }}">
+                        <img src="{% url 'card_qr' card.public_token %}" alt="QR code for {{ profile.public_name }}">
                     </div>
                 </div>
             </div>

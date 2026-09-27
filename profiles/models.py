@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class Profile(models.Model):
@@ -7,6 +8,15 @@ class Profile(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name="profile",
+    )
+
+    display_username = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+    login_email = models.EmailField(
+        blank=True,
+        null=True,
     )
 
     full_name = models.CharField(max_length=150, blank=True)
@@ -34,5 +44,30 @@ class Profile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower("login_email"),
+                condition=models.Q(login_email__isnull=False),
+                name="profile_login_email_ci_unique",
+            ),
+        ]
+
+    @property
+    def account_name(self):
+        return (
+            self.display_username
+            or self.full_name
+            or self.user.username
+        )
+
+    @property
+    def public_name(self):
+        return (
+            self.full_name
+            or self.display_username
+            or self.user.username
+        )
+
     def __str__(self):
-        return self.full_name or self.user.username
+        return self.public_name

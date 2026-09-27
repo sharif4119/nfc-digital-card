@@ -15,12 +15,12 @@
             <div class="profile-cover"></div>
             <div class="profile-content">
                 {% if profile.profile_picture %}
-                    <img src="{{ profile.profile_picture.url }}" alt="{{ profile.full_name|default:user.username }}" class="public-profile-photo">
+                    <img src="{{ profile.profile_picture.url }}" alt="{{ profile.public_name }}" class="public-profile-photo">
                 {% else %}
-                    <div class="public-profile-placeholder">{{ profile.full_name|default:user.username|first|upper }}</div>
+                    <div class="public-profile-placeholder">{{ profile.public_name|first|upper }}</div>
                 {% endif %}
                 <div class="profile-identity">
-                    <h1>{{ profile.full_name|default:user.username }}</h1>
+                    <h1>{{ profile.public_name }}</h1>
                     {% if profile.job_title or profile.company %}
                         <p class="profile-role">{% if profile.job_title %}{{ profile.job_title }}{% endif %}{% if profile.job_title and profile.company %}<span class="mx-1">·</span>{% endif %}{% if profile.company %}<span class="profile-company">{{ profile.company }}</span>{% endif %}</p>
                     {% endif %}

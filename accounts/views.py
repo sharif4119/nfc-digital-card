@@ -1,8 +1,18 @@
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
+from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 
-from .forms import RegisterForm
+from .forms import (
+    EmailOrUsernameAuthenticationForm,
+    RegisterForm,
+)
+
+
+class NexTapLoginView(LoginView):
+    authentication_form = EmailOrUsernameAuthenticationForm
+    template_name = "registration/login.html"
 
 
 def register_view(request):
@@ -13,9 +23,17 @@ def register_view(request):
         form = RegisterForm(request.POST)
 
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect("dashboard")
+            try:
+                with transaction.atomic():
+                    user = form.save()
+            except IntegrityError:
+                form.add_error(
+                    "email",
+                    "An account with this email already exists.",
+                )
+            else:
+                login(request, user)
+                return redirect("dashboard")
     else:
         form = RegisterForm()
 

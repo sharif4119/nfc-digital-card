@@ -16,7 +16,33 @@
                 </div>
                 <form method="post">
                     {% csrf_token %}
-                    {{ form.as_p }}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    {% for field in form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {% if field.name == "password1" or field.name == "password2" %}
+                                <div class="password-input-group">
+                                    {{ field }}
+                                    <button
+                                        type="button"
+                                        class="password-toggle"
+                                        data-password-toggle
+                                        data-target="{{ field.id_for_label }}"
+                                        data-label="{{ field.label|lower }}"
+                                        aria-label="Show {{ field.label|lower }}"
+                                        aria-controls="{{ field.id_for_label }}"
+                                        aria-pressed="false"
+                                    ><i class="bi bi-eye" aria-hidden="true"></i></button>
+                                </div>
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+                            {% if field.errors %}{{ field.errors }}{% endif %}
+                            {% if field.help_text %}<span class="helptext">{{ field.help_text|safe }}</span>{% endif %}
+                        </div>
+                    {% endfor %}
                     <button type="submit" class="btn btn-primary w-100 mt-2">Create Account <i class="bi bi-arrow-right"></i></button>
                 </form>
                 <div class="form-divider"></div>

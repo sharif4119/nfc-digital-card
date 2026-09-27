@@ -250,6 +250,11 @@ a:hover { color: #004fcf; }
 .form-shell input:focus, .form-shell select:focus, .form-shell textarea:focus, .form-control:focus, .form-select:focus { background: var(--white); border-color: #83b7ff; box-shadow: 0 0 0 4px rgba(19, 137, 255, .1); outline: 0; }
 .form-shell .helptext, .form-shell .helptext ul { display: block; margin: .4rem 0 0; padding-left: 1rem; color: #7a8798; font-size: .76rem; }
 .form-shell .errorlist { margin: 0 0 .45rem; padding: 0; color: var(--danger); font-size: .8rem; font-weight: 650; list-style: none; }
+.password-input-group { position: relative; }
+.password-input-group input { padding-right: 3rem; }
+.password-toggle { position: absolute; top: 50%; right: .55rem; display: grid; width: 36px; height: 36px; padding: 0; place-items: center; color: #52657c; background: transparent; border: 0; border-radius: 9px; transform: translateY(-50%); }
+.password-toggle:hover { color: var(--blue-600); background: #eaf3ff; }
+.password-toggle:focus-visible { outline: 3px solid rgba(19, 137, 255, .3); outline-offset: 1px; }
 .form-divider { height: 1px; margin: 1.6rem 0; background: var(--line); }
 
 .product-grid-card { display: flex; height: 100%; flex-direction: column; overflow: hidden; background: var(--white); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow-sm); transition: transform .22s ease, box-shadow .22s ease; }

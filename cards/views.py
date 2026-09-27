@@ -78,7 +78,7 @@ def download_vcard(request, token):
     vcard = [
         "BEGIN:VCARD",
         "VERSION:3.0",
-        f"FN:{profile.full_name}",
+        f"FN:{profile.public_name}",
     ]
 
     if profile.company:
@@ -109,7 +109,7 @@ def download_vcard(request, token):
     filename = (
         profile.full_name.replace(" ", "_")
         if profile.full_name
-        else card.owner.username
+        else profile.account_name.replace(" ", "_")
     )
 
     response[

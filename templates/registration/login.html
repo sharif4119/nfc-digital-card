@@ -15,11 +15,32 @@
                     <p class="auth-lead">Manage your profile, card, and orders.</p>
                 </div>
                 {% if form.errors %}
-                    <div class="alert alert-danger d-flex gap-2 align-items-start"><i class="bi bi-exclamation-circle-fill"></i><span>Invalid username or password. Please try again.</span></div>
+                    <div class="alert alert-danger d-flex gap-2 align-items-start"><i class="bi bi-exclamation-circle-fill"></i><span>Invalid email, username, or password. Please try again.</span></div>
                 {% endif %}
                 <form method="post">
                     {% csrf_token %}
-                    {{ form.as_p }}
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}{{ form.username.errors }}{% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                        <div class="password-input-group">
+                            {{ form.password }}
+                            <button
+                                type="button"
+                                class="password-toggle"
+                                data-password-toggle
+                                data-target="{{ form.password.id_for_label }}"
+                                data-label="password"
+                                aria-label="Show password"
+                                aria-controls="{{ form.password.id_for_label }}"
+                                aria-pressed="false"
+                            ><i class="bi bi-eye" aria-hidden="true"></i></button>
+                        </div>
+                        {% if form.password.errors %}{{ form.password.errors }}{% endif %}
+                    </div>
                     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
                     <button type="submit" class="btn btn-primary w-100 mt-2">Login <i class="bi bi-arrow-right"></i></button>
                 </form>
