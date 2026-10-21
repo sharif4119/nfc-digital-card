@@ -2,7 +2,7 @@ from django.contrib import admin
 
 
 from cards.models import NFCCard
-from .models import Order
+from .models import Order, CardAllocation
 
 
 @admin.register(Order)
@@ -32,7 +32,17 @@ class OrderAdmin(admin.ModelAdmin):
 
     readonly_fields = [
         "created_at",
+        "card_category",
+        "offline_contact_print",
     ]
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = list(super().get_readonly_fields(request, obj))
+        if obj and obj.quantity > 1:
+            fields.append("assigned_card")
+        if obj:
+            fields.extend(["user", "quantity", "product", "business_order_type", "business_profile"])
+        return fields
 
     fieldsets = [
         (
@@ -43,6 +53,9 @@ class OrderAdmin(admin.ModelAdmin):
                     "product",
                     "quantity",
                     "price",
+                    "card_category",
+                    "business_order_type",
+                    "business_profile",
                 ]
             },
         ),
@@ -126,6 +139,9 @@ class OrderAdmin(admin.ModelAdmin):
         change,
     ):
         previous_card = None
+        if not change:
+            obj.card_category = obj.product.card_category
+            obj.offline_contact_print = True
 
         if obj.pk:
             previous_order = Order.objects.filter(
@@ -143,6 +159,11 @@ class OrderAdmin(admin.ModelAdmin):
             form,
             change,
         )
+        if not change:
+            CardAllocation.objects.bulk_create([
+                CardAllocation(order=obj, position=position)
+                for position in range(1, obj.quantity + 1)
+            ])
 
         new_card = obj.assigned_card
 
@@ -165,7 +186,7 @@ class OrderAdmin(admin.ModelAdmin):
             )
 
         # Newly assigned card should only become ASSIGNED.
-        if new_card:
+        if new_card and new_card != previous_card:
             new_card.owner = obj.user
             new_card.status = "ASSIGNED"
             new_card.programmed_at = None
@@ -181,6 +202,9 @@ class OrderAdmin(admin.ModelAdmin):
                     "activated_at",
                 ]
             )
+            allocation, _ = CardAllocation.objects.get_or_create(order=obj, position=1)
+            allocation.card = new_card
+            allocation.save(update_fields=["card"])
 
             if obj.order_status != "CARD_ASSIGNED":
                 obj.order_status = "CARD_ASSIGNED"
@@ -194,6 +218,7 @@ class OrderAdmin(admin.ModelAdmin):
         # Card assignment removed completely.
         elif (
             previous_card
+            and not new_card
             and obj.order_status == "CARD_ASSIGNED"
         ):
             obj.order_status = (
@@ -207,4 +232,4 @@ class OrderAdmin(admin.ModelAdmin):
                     "order_status",
                 ]
             )
-            
+            CardAllocation.objects.filter(order=obj, position=1).update(card=None)

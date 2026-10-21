@@ -8,6 +8,7 @@
         <div class="page-heading">
             <div><div class="eyebrow">The NexTap collection</div><h1>Choose your NFC card</h1><p>Premium physical cards connected to a digital profile you can update anytime.</p></div>
         </div>
+        <div class="row g-3 mb-4"><div class="col-md-6"><div class="premium-card p-4 h-100"><h2 class="h5">Personal NFC Card</h2><p class="mb-0">Your individual identity, contacts and links on one compact card.</p></div></div><div class="col-md-6"><div class="premium-card p-4 h-100"><h2 class="h5">Business NFC Card</h2><p class="mb-0">One shared business profile with one card or separate cards for your team.</p></div></div></div>
 
         <div class="row g-4">
             {% for product in products %}
@@ -51,10 +52,11 @@
                             <span class="availability-badge"><span class="availability-dot"></span>Available</span>
                         </div>
                         <div class="product-card-content">
+                            <div class="card-kicker">{{ product.get_card_category_display }}</div>
                             <h2>{{ product.name }}</h2>
                             <p>{{ product.description|default:"A premium NFC card linked to your live NexTap profile."|truncatewords:22 }}</p>
                             <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
-                                <div class="product-price">৳{{ product.price }} <small>one card</small></div>
+                                <div class="product-price">৳{{ product.price }} <small>per card</small></div>
                             </div>
                             <div class="d-grid gap-2">
                                 <a href="{% url 'product_detail' product.id %}" class="btn btn-primary">View Details <i class="bi bi-arrow-right"></i></a>

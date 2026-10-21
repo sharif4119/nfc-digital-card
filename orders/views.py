@@ -1,11 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.db import transaction
 
 from products.models import Product
 
 from .forms import OrderForm
-from .models import Order
+from .models import Order, CardAllocation
+from profiles.models import BusinessProfile
 
 
 @login_required
@@ -17,19 +19,35 @@ def create_order(request, product_id):
     )
 
     if request.method == "POST":
-        form = OrderForm(request.POST)
+        form = OrderForm(request.POST, product=product)
 
         if form.is_valid():
+            business = None
+            if product.card_category == "BUSINESS":
+                business = BusinessProfile.objects.filter(owner=request.user).first()
+                if business is None:
+                    form.add_error(None, "Create your business profile before ordering a business card.")
+            if form.errors:
+                return render(request, "orders/create_order.html", {"form": form, "product": product, "business_profile": business})
             order = form.save(commit=False)
 
             order.user = request.user
             order.product = product
-            order.quantity = 1
-            order.price = product.price
+            order.quantity = form.cleaned_data.get("quantity") or 1
+            order.business_order_type = form.cleaned_data.get("business_order_type") or ""
+            order.business_profile = business
+            order.card_category = product.card_category
+            order.offline_contact_print = True
+            order.price = product.price * order.quantity
             order.payment_status = "UNPAID"
             order.order_status = "PENDING"
 
-            order.save()
+            with transaction.atomic():
+                order.save()
+                CardAllocation.objects.bulk_create([
+                    CardAllocation(order=order, position=position)
+                    for position in range(1, order.quantity + 1)
+                ])
 
             messages.success(
                 request,
@@ -63,7 +81,7 @@ def create_order(request, product_id):
             ),
         }
 
-        form = OrderForm(initial=initial)
+        form = OrderForm(initial=initial, product=product)
 
     return render(
         request,
@@ -71,6 +89,7 @@ def create_order(request, product_id):
         {
             "form": form,
             "product": product,
+            "business_profile": BusinessProfile.objects.filter(owner=request.user).first(),
         },
     )
 
@@ -88,6 +107,7 @@ def order_detail(request, order_id):
         "orders/order_detail.html",
         {
             "order": order,
+            "allocations": order.allocations.select_related("card", "representative"),
         },
     )
 

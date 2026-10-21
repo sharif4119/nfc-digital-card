@@ -30,12 +30,20 @@ class NFCCard(models.Model):
         editable=False,
     )
 
-    owner = models.OneToOneField(
+    owner = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="nfc_card",
+        related_name="nfc_cards",
+    )
+    business_profile = models.ForeignKey(
+        "profiles.BusinessProfile", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="cards",
+    )
+    representative = models.ForeignKey(
+        "profiles.BusinessRepresentative", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="cards",
     )
 
     status = models.CharField(
@@ -108,3 +116,27 @@ class NFCCard(models.Model):
 
     def __str__(self):
         return f"{self.card_uid} - {self.status}"
+
+
+class CardVisit(models.Model):
+    card = models.ForeignKey(NFCCard, on_delete=models.CASCADE, related_name="visits")
+    visitor_hash = models.CharField(max_length=64)
+    visited_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["card", "visited_at"])]
+
+
+class CardInquiry(models.Model):
+    card = models.ForeignKey(NFCCard, on_delete=models.CASCADE, related_name="inquiries")
+    name = models.CharField(max_length=150)
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    interest = models.CharField(max_length=150)
+    message = models.TextField(blank=True)
+    consent = models.BooleanField(default=False)
+    source_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]

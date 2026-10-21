@@ -4,6 +4,7 @@ from . import views
 
 
 urlpatterns = [
+    path("orders/<int:order_id>/allocations/<int:allocation_id>/prepare/", views.prepare_allocation, name="seller_api_prepare_allocation"),
     path(
         "login/",
         views.seller_login,

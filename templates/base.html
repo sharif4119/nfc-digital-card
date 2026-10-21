@@ -29,6 +29,7 @@
                 {% if user.is_authenticated %}
                     <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
                     <a href="{% url 'order_list' %}" class="nav-link">My Orders</a>
+                    <a href="{% url 'business_cards' %}" class="nav-link">Business</a>
                     <form method="post" action="{% url 'logout' %}" class="nav-logout-form">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-nav-outline">

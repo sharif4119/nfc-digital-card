@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework import serializers
 
 from cards.models import NFCCard
-from orders.models import Order
+from orders.models import Order, CardAllocation
 
 
 class NFCCardSerializer(serializers.ModelSerializer):
@@ -20,6 +20,8 @@ class NFCCardSerializer(serializers.ModelSerializer):
 
     public_url = serializers.SerializerMethodField()
     print_pdf_url = serializers.SerializerMethodField()
+    card_category = serializers.SerializerMethodField()
+    representative = serializers.SerializerMethodField()
 
     class Meta:
         model = NFCCard
@@ -29,6 +31,8 @@ class NFCCardSerializer(serializers.ModelSerializer):
             "public_token",
             "public_url",
             "print_pdf_url",
+            "card_category",
+            "representative",
             "status",
             "owner",
             "owner_username",
@@ -48,6 +52,15 @@ class NFCCardSerializer(serializers.ModelSerializer):
         )
         return f"{settings.PUBLIC_BASE_URL.rstrip('/')}" f"{path}"
 
+    def get_card_category(self, obj):
+        return "BUSINESS" if obj.business_profile_id else "PERSONAL"
+
+    def get_representative(self, obj):
+        if not obj.representative_id:
+            return None
+        rep = obj.representative
+        return {"id": rep.id, "name": rep.name, "designation": rep.designation, "phone": rep.phone, "email": rep.email}
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
@@ -57,7 +70,24 @@ class NFCCardSerializer(serializers.ModelSerializer):
         return data
 
 
+class CardAllocationSerializer(serializers.ModelSerializer):
+    card = NFCCardSerializer(read_only=True)
+    representative = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CardAllocation
+        fields = ["id", "position", "representative", "card"]
+        read_only_fields = fields
+
+    def get_representative(self, obj):
+        if not obj.representative_id:
+            return None
+        rep = obj.representative
+        return {"id": rep.id, "name": rep.name, "designation": rep.designation, "phone": rep.phone, "email": rep.email}
+
+
 class OrderSerializer(serializers.ModelSerializer):
+    prepared_count = serializers.SerializerMethodField()
     product_name = serializers.CharField(
         source="product.name",
         read_only=True,
@@ -71,6 +101,7 @@ class OrderSerializer(serializers.ModelSerializer):
     assigned_card = NFCCardSerializer(
         read_only=True,
     )
+    allocations = CardAllocationSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -87,7 +118,15 @@ class OrderSerializer(serializers.ModelSerializer):
             "payment_status",
             "order_status",
             "assigned_card",
+            "card_category",
+            "business_order_type",
+            "quantity",
+            "prepared_count",
+            "allocations",
             "created_at",
         ]
 
         read_only_fields = fields
+
+    def get_prepared_count(self, obj):
+        return sum(1 for allocation in obj.allocations.all() if allocation.card_id)

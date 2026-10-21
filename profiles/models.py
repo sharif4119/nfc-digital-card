@@ -71,3 +71,49 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.public_name
+
+
+class BusinessProfile(models.Model):
+    owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name="business_profile")
+    name = models.CharField(max_length=150)
+    logo = models.ImageField(upload_to="business/logos/", blank=True, null=True)
+    description = models.TextField(blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    website = models.URLField(blank=True)
+    address = models.CharField(max_length=255, blank=True)
+    facebook = models.URLField(blank=True)
+    instagram = models.URLField(blank=True)
+    linkedin = models.URLField(blank=True)
+    whatsapp = models.CharField(max_length=30, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class BusinessRepresentative(models.Model):
+    business = models.ForeignKey(BusinessProfile, on_delete=models.CASCADE, related_name="representatives")
+    name = models.CharField(max_length=150)
+    designation = models.CharField(max_length=150, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class FeaturedOffering(models.Model):
+    business = models.ForeignKey(BusinessProfile, on_delete=models.CASCADE, related_name="offerings")
+    name = models.CharField(max_length=150)
+    description = models.CharField(max_length=300, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    image = models.ImageField(upload_to="business/offerings/", blank=True, null=True)
+    position = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ["position", "id"]
+
+    def __str__(self):
+        return self.name

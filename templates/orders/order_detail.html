@@ -53,6 +53,7 @@
                         {% else %}
                             <div class="notice-box notice-muted mt-0"><i class="bi bi-clock"></i><span>Your NFC card has not been assigned yet.</span></div>
                         {% endif %}
+                        {% if order.quantity > 1 %}<hr><h3 class="h6 fw-bold">Individual cards</h3>{% for allocation in allocations %}<div class="card-meta-row"><span>#{{ allocation.position }} · {{ allocation.representative.name|default:"Representative pending" }}</span><strong>{% if allocation.card %}{{ allocation.card.card_uid }} · {{ allocation.card.status }}{% else %}Awaiting preparation{% endif %}</strong></div>{% endfor %}{% endif %}
                     </div>
                 </article>
             </div>

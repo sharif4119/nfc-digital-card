@@ -13,6 +13,8 @@
 
 <section class="dashboard-content">
     <div class="container">
+        <div class="d-flex flex-wrap gap-2 mb-4"><a href="{% url 'business_edit' %}" class="btn btn-outline-primary">{% if business_profile %}Edit business profile{% else %}Create business profile{% endif %}</a>{% if business_profile %}<a href="{% url 'business_cards' %}" class="btn btn-primary">Manage business cards &amp; inquiries</a>{% endif %}</div>
+        <div class="row g-3 mb-4"><div class="col-md-4"><div class="dashboard-card"><h2 class="h6">Online profile visits</h2><strong class="h3">{{ visit_summary.total }}</strong></div></div><div class="col-md-4"><div class="dashboard-card"><h2 class="h6">Estimated unique visitors</h2><strong class="h3">{{ visit_summary.estimated_unique }}</strong></div></div><div class="col-md-4"><div class="dashboard-card"><h2 class="h6">Business inquiries</h2><strong class="h3">{{ inquiry_count }}</strong></div></div></div>
         <div class="row g-4">
             <div class="col-lg-4">
                 <article class="dashboard-card">
@@ -48,7 +50,7 @@
             <div class="col-lg-4">
                 <article class="dashboard-card">
                     <div class="dashboard-card-header">
-                        <h2>My NFC Card</h2>
+                        <h2>My NFC Cards</h2>
                         <div class="dashboard-icon"><i class="bi bi-credit-card-2-front"></i></div>
                     </div>
                     {% if card %}
@@ -79,6 +81,7 @@
                             <a href="{% url 'product_list' %}" class="btn btn-primary btn-sm">Browse Cards</a>
                         </div>
                     {% endif %}
+                    {% if cards.count > 1 %}<div class="mt-3"><h3 class="h6">Other cards</h3>{% for other in cards %}{% if other.id != card.id %}<div class="card-meta-row"><span>{{ other.card_uid }}</span><span class="status-pill status-{{ other.status|lower }}">{{ other.status }}</span></div>{% endif %}{% endfor %}</div>{% endif %}
                 </article>
             </div>
 

@@ -1,4 +1,6 @@
-# NFC Digital Business Card System
+# NexTap NFC Digital Business Card System
+
+For the personal/business card extension and Android seller handoff, see [Seller API business cards](docs/seller-api-business-cards.md). The Render notes below describe an earlier demo setup; current canonical card links use the configured `PUBLIC_BASE_URL` (PythonAnywhere by default).
 
 A Django application for customer profiles, NFC card ordering, administrator card assignment, public digital cards, QR codes, and vCard downloads.
 

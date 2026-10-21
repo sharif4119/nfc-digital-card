@@ -20,12 +20,12 @@
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="eyebrow">Available now</div>
+                <div class="eyebrow">{{ product.get_card_category_display }} · Available now</div>
                 <h1 class="section-title mb-3">{{ product.name }}</h1>
                 <div class="product-price mb-3">৳{{ product.price }}</div>
                 <p class="section-copy">{{ product.description|default:"A premium NFC card connected to your editable digital profile."|linebreaksbr }}</p>
                 <ul class="detail-feature-list">
-                    <li><i class="bi bi-check-circle-fill"></i>One physical NFC card per order</li>
+                    <li><i class="bi bi-check-circle-fill"></i>{% if product.card_category == "BUSINESS" %}Order one card or multiple representative cards{% else %}One physical NFC card per order{% endif %}</li>
                     <li><i class="bi bi-check-circle-fill"></i>Permanent public profile link</li>
                     <li><i class="bi bi-check-circle-fill"></i>QR code and contact download included</li>
                     <li><i class="bi bi-check-circle-fill"></i>Update your profile without rewriting the card</li>
