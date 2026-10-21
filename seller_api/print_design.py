@@ -3,10 +3,13 @@ import io
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 
+from cards.contact import build_vcard
+from orders.models import CardAllocation
+
 
 PRINT_DPI = 300
-CR80_WIDTH_MM = 85.60
-CR80_HEIGHT_MM = 53.98
+CR80_SIZE_MM = (85.60, 53.98)
+CR80_WIDTH_MM, CR80_HEIGHT_MM = CR80_SIZE_MM
 CR80_SIZE = (
     round(CR80_WIDTH_MM / 25.4 * PRINT_DPI),
     round(CR80_HEIGHT_MM / 25.4 * PRINT_DPI),
@@ -56,6 +59,12 @@ def _draw_nfc_mark(draw, center, color):
 
 
 def build_card_print_images(public_url):
+    card = public_url if hasattr(public_url, "public_token") else None
+    allocation = None
+    if card:
+        allocation = CardAllocation.objects.select_related("order__product").filter(card=card).first()
+        public_url = card.public_url
+    new_print = bool(card and allocation and allocation.order.offline_contact_print)
     width, height = CR80_SIZE
     navy = "#07111f"
     cyan = "#16d9ff"
@@ -82,12 +91,13 @@ def build_card_print_images(public_url):
         font=_font(68, bold=True),
     )
     front_draw.rectangle((82, 178, 238, 190), fill=cyan)
-    front_draw.text(
-        (82, 232),
-        "Tap once. Share everything.",
-        fill=muted,
-        font=_font(31),
-    )
+    if not new_print:
+        front_draw.text(
+            (82, 232),
+            "Tap once. Share everything.",
+            fill=muted,
+            font=_font(31),
+        )
     front_draw.text(
         (82, height - 112),
         "NFC DIGITAL BUSINESS CARD",
@@ -96,9 +106,28 @@ def build_card_print_images(public_url):
     )
     _draw_nfc_mark(
         front_draw,
-        (width - 225, height // 2 + 28),
+        (width - 210, height // 2 + 80) if new_print else (width - 225, height // 2 + 28),
         cyan,
     )
+    if new_print:
+        if card.business_profile:
+            business = card.business_profile
+            name_x = 178 if business.logo else 82
+            if business.logo:
+                try:
+                    logo = Image.open(business.logo).convert("RGB")
+                    logo.thumbnail((76, 76))
+                    front.paste(logo, (82, 218))
+                except (OSError, ValueError):
+                    pass
+            front_draw.text((name_x, 220), business.name[:23], fill=white, font=_font(34, bold=True))
+            if card.representative:
+                front_draw.text((name_x, 278), card.representative.name[:25], fill=cyan, font=_font(27, bold=True))
+                front_draw.text((name_x, 319), card.representative.designation[:35], fill=muted, font=_font(22))
+        else:
+            profile = card.owner.profile
+            front_draw.text((82, 225), profile.public_name[:23], fill=white, font=_font(34, bold=True))
+            front_draw.text((82, 278), profile.job_title[:35], fill=muted, font=_font(23))
 
     back = Image.new("RGB", CR80_SIZE, white)
     back_draw = ImageDraw.Draw(back)
@@ -110,8 +139,10 @@ def build_card_print_images(public_url):
         font=_font(38, bold=True),
     )
 
-    qr = qrcode.make(public_url).convert("RGB")
-    qr_size = 390
+    offline = new_print
+    qr_value = build_vcard(card, offline=True) if offline else public_url
+    qr = qrcode.make(qr_value).convert("RGB")
+    qr_size = 430 if offline else 390
     qr = qr.resize(
         (qr_size, qr_size),
         Image.Resampling.NEAREST,
@@ -135,20 +166,20 @@ def build_card_print_images(public_url):
     copy_x = 520
     back_draw.text(
         (copy_x, 180),
-        "SCAN TO CONNECT",
+        "OFFLINE CONTACT QR" if offline else "SCAN TO CONNECT",
         fill=blue,
         font=_font(25, bold=True),
     )
     back_draw.text(
         (copy_x, 235),
-        "Your digital profile,\nready in one tap.",
+        "Save contact offline.\nOpen profile later." if offline else "Your digital profile,\nready in one tap.",
         fill=navy,
         font=_font(34, bold=True),
         spacing=10,
     )
     back_draw.text(
         (copy_x, 360),
-        "No app required.",
+        "Contact snapshot at print time." if offline else "No app required.",
         fill="#4b6075",
         font=_font(25),
     )

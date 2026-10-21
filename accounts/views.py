@@ -8,6 +8,8 @@ from .forms import (
     EmailOrUsernameAuthenticationForm,
     RegisterForm,
 )
+from cards.models import CardVisit, CardInquiry
+from django.db.models import Count
 
 
 class NexTapLoginView(LoginView):
@@ -46,11 +48,8 @@ def register_view(request):
 
 @login_required
 def dashboard_view(request):
-    card = getattr(
-        request.user,
-        "nfc_card",
-        None,
-    )
+    cards = request.user.nfc_cards.order_by("-created_at")
+    card = cards.filter(status="ACTIVE").first() or cards.first()
 
     profile = getattr(
         request.user,
@@ -61,6 +60,9 @@ def dashboard_view(request):
     recent_orders = request.user.orders.order_by(
         "-created_at"
     )[:3]
+    visit_summary = CardVisit.objects.filter(card__owner=request.user).aggregate(
+        total=Count("id"), estimated_unique=Count("visitor_hash", distinct=True)
+    )
 
     return render(
         request,
@@ -69,5 +71,9 @@ def dashboard_view(request):
             "card": card,
             "profile": profile,
             "recent_orders": recent_orders,
+            "cards": cards,
+            "business_profile": getattr(request.user, "business_profile", None),
+            "visit_summary": visit_summary,
+            "inquiry_count": CardInquiry.objects.filter(card__owner=request.user).count(),
         },
     )

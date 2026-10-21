@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ profile.public_name }}{% endblock %}
+{% block title %}{% if business %}{{ business.name }}{% else %}{{ profile.public_name }}{% endif %}{% endblock %}
 {% block body_class %}public-profile-page{% endblock %}
 
 {% block site_header %}
@@ -16,6 +16,51 @@
     <div class="container px-3">
         <article class="digital-profile-card">
             <div class="profile-cover"></div>
+            {% if business %}
+            <div class="profile-content">
+                {% if business.logo %}<img src="{{ business.logo.url }}" alt="{{ business.name }} logo" class="public-profile-photo">{% else %}<div class="public-profile-placeholder">{{ business.name|first|upper }}</div>{% endif %}
+                <div class="profile-identity">
+                    <h1>{{ business.name }}</h1>
+                    {% if representative %}<p class="profile-role">{{ representative.name }}{% if representative.designation %} · {{ representative.designation }}{% endif %}</p>{% endif %}
+                    {% if business.description %}<p class="profile-bio">{{ business.description|linebreaksbr }}</p>{% endif %}
+                </div>
+                <div class="profile-primary-actions">
+                    <a href="{% url 'download_vcard' card.public_token %}" class="btn btn-primary"><i class="bi bi-person-plus-fill"></i>Save Contact</a>
+                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#profileQr" aria-expanded="false" aria-controls="profileQr"><i class="bi bi-qr-code"></i>Show QR codes</button>
+                </div>
+                <div class="contact-action-grid">
+                    {% if representative.phone %}<a class="contact-action" href="tel:{{ representative.phone }}"><i class="bi bi-telephone"></i><span>{{ representative.phone }} ({{ representative.name }})</span></a>{% endif %}
+                    {% if representative.email %}<a class="contact-action" href="mailto:{{ representative.email }}"><i class="bi bi-envelope"></i><span>{{ representative.email }}</span></a>{% endif %}
+                    {% if business.phone %}<a class="contact-action" href="tel:{{ business.phone }}"><i class="bi bi-telephone"></i><span>{{ business.phone }}</span></a>{% endif %}
+                    {% if business.email %}<a class="contact-action" href="mailto:{{ business.email }}"><i class="bi bi-envelope"></i><span>{{ business.email }}</span></a>{% endif %}
+                    {% if business.website %}<a class="contact-action" href="{{ business.website }}" target="_blank" rel="noopener"><i class="bi bi-globe2"></i><span>Website / store</span></a>{% endif %}
+                    {% if business.whatsapp %}<a class="contact-action" href="https://wa.me/{{ business.whatsapp }}" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i><span>WhatsApp</span></a>{% endif %}
+                </div>
+                {% if business.facebook or business.instagram or business.linkedin %}<div class="social-row" aria-label="Social profiles">
+                    {% if business.facebook %}<a href="{{ business.facebook }}" class="social-link" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>{% endif %}
+                    {% if business.instagram %}<a href="{{ business.instagram }}" class="social-link" target="_blank" rel="noopener" aria-label="Instagram"><i class="bi bi-instagram"></i></a>{% endif %}
+                    {% if business.linkedin %}<a href="{{ business.linkedin }}" class="social-link" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>{% endif %}
+                </div>{% endif %}
+                {% if business.address %}<div class="profile-address"><i class="bi bi-geo-alt-fill"></i><span>{{ business.address }}</span></div>{% endif %}
+                {% if business.offerings.all %}<div class="mt-4"><h2 class="h5 fw-bold">Featured products &amp; services</h2><div class="row g-3">
+                    {% for offering in business.offerings.all %}<div class="col-sm-6"><div class="premium-card h-100">
+                        {% if offering.image %}<img src="{{ offering.image.url }}" alt="{{ offering.name }}" class="w-100 rounded-top" style="max-height:180px;object-fit:cover">{% endif %}
+                        <div class="p-3"><h3 class="h6 fw-bold">{{ offering.name }}</h3><p class="small text-muted mb-1">{{ offering.description }}</p>{% if offering.price %}<strong>৳{{ offering.price }}</strong>{% endif %}</div>
+                    </div></div>{% endfor %}
+                </div></div>{% endif %}
+                <div class="collapse" id="profileQr"><div class="profile-qr-panel">
+                    <strong>Offline contact QR</strong><p class="small text-muted">Contains a saved contact snapshot and profile link. Changes online do not update a printed QR.</p>
+                    <img src="{% url 'offline_contact_qr' card.public_token %}" alt="Offline contact QR for {{ business.name }}">
+                    <hr><strong>Online profile QR</strong><p class="small text-muted">Opens this live profile when connected to the internet.</p>
+                    <img src="{% url 'card_qr' card.public_token %}" alt="Online profile QR for {{ business.name }}">
+                </div></div>
+                <section class="mt-5" aria-labelledby="inquiry-title"><h2 id="inquiry-title" class="h5 fw-bold">Ask this business a question</h2>
+                    <p class="small text-muted">Your details are shared only with this business to respond to your inquiry. Sending is voluntary.</p>
+                    {% if inquiry_sent %}<div class="alert alert-success">Your inquiry was sent.</div>{% endif %}
+                    <form method="post">{% csrf_token %}{{ inquiry_form.as_p }}<button type="submit" class="btn btn-primary">Send inquiry</button></form>
+                </section>
+            </div>
+            {% else %}
             <div class="profile-content">
                 {% if profile.profile_picture %}
                     <img src="{{ profile.profile_picture.url }}" alt="{{ profile.public_name }}" class="public-profile-photo">
@@ -63,9 +108,12 @@
                         <strong>Scan to open this profile</strong>
                         <p class="small text-muted mb-0">Use your phone camera when NFC isn't available.</p>
                         <img src="{% url 'card_qr' card.public_token %}" alt="QR code for {{ profile.public_name }}">
+                        <hr><strong>Offline contact QR</strong><p class="small text-muted">A snapshot of essential contact details and this profile link.</p>
+                        <img src="{% url 'offline_contact_qr' card.public_token %}" alt="Offline contact QR for {{ profile.public_name }}">
                     </div>
                 </div>
             </div>
+            {% endif %}
             <footer class="public-profile-footer">Shared with NexTap · Tap once. Share everything.</footer>
         </article>
     </div>
