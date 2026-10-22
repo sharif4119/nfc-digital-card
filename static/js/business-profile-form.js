@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const categorySelect = document.querySelector("[data-organization-category]");
   const categoryFields = document.querySelectorAll("[data-organization-field]");
   const ownerPrivacy = document.querySelector("[data-owner-privacy]");
+  const ownerContactPrivacy = document.querySelectorAll("[data-owner-contact-privacy]");
+  const identityPrivacyDescription = document.querySelector("[data-identity-privacy-description]");
   if (!typeSelect) return;
 
   const setText = (selector, text) => {
@@ -17,7 +19,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const itemTerm = isEducation ? "Academic Program" : "Product / Service";
 
     categoryFields.forEach((field) => { field.hidden = !isOrganization; });
-    if (ownerPrivacy) ownerPrivacy.hidden = isOrganization;
+    if (ownerPrivacy) ownerPrivacy.hidden = false;
+    ownerContactPrivacy.forEach((field) => { field.hidden = isOrganization; });
+    if (identityPrivacyDescription) {
+      identityPrivacyDescription.textContent = isOrganization
+        ? "Choose whether the representative assigned to this card appears above your organization details."
+        : "Choose whether the owner or assigned representative appears above your business details. Multiple-card pages use only each card’s assigned representative.";
+    }
 
     const labels = {
       eyebrow: isOrganization ? "Organization identity" : "Business identity",

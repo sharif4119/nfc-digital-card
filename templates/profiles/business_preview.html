@@ -25,6 +25,7 @@
                     </select>
                 </form>
             {% endif %}
+            {% if business.show_owner_identity and not business_identity %}<div class="alert alert-info mt-3" role="status">{{ identity_message }}</div>{% endif %}
             {% include "profiles/_combined_business_profile.html" with preview=True public_card=False %}
         {% else %}
             <section class="nxt-business-identity nxt-business-no-profile">

@@ -1,6 +1,6 @@
 {% load static %}
 <div class="nxt-combined-profile{% if business.profile_type == 'ORGANIZATION' %} is-organization{% if business.organization_category == 'EDUCATIONAL_INSTITUTE' %} is-academic{% endif %}{% endif %}">
-    <section class="nxt-person-identity" aria-labelledby="nxt-person-name">
+    {% if business_identity %}<section class="nxt-person-identity" aria-labelledby="nxt-person-name">
         <div class="nxt-person-avatar">
             {% if business_identity.photo_url %}<img src="{{ business_identity.photo_url }}" alt="{{ business_identity.name }}" loading="lazy">
             {% else %}<span aria-hidden="true">{% if business_identity.name %}{{ business_identity.name|first|upper }}{% else %}<i class="bi bi-person" aria-hidden="true"></i>{% endif %}</span>{% endif %}
@@ -28,19 +28,13 @@
                         {% if business_identity.github %}<a href="{{ business_identity.github }}" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
                     </nav>
                 {% endif %}
-                {% if public_card %}<div class="nxt-person-actions"><a class="btn btn-primary" href="{% url 'download_vcard' card.public_token %}"><i class="bi bi-person-plus" aria-hidden="true"></i>Save Contact</a></div>{% endif %}
-            {% else %}
-                <div class="eyebrow">Personal identity</div>
-                <h2 id="nxt-person-name">Identity not set yet</h2>
-                <p class="nxt-person-bio">{{ identity_message }}</p>
-                {% if preview %}{% if business.show_owner_identity %}<a class="btn btn-outline-primary btn-sm" href="{% url 'edit_profile' %}">Complete Personal Profile</a>{% else %}<a class="btn btn-outline-primary btn-sm" href="{% url 'business_edit' %}">Review Business Privacy Settings</a>{% endif %}{% endif %}
             {% endif %}
         </div>
-    </section>
+    </section>{% endif %}
 
     <section class="nxt-business-identity nxt-combined-business" aria-labelledby="nxt-business-name">
-        <div class="nxt-org-cover">
-            {% if business_banner_url %}<img src="{{ business_banner_url }}" alt="" loading="lazy">{% else %}<div class="nxt-org-cover-placeholder" aria-hidden="true"></div>{% endif %}
+        <div class="nxt-org-cover{% if not business_banner_url %} has-no-banner{% endif %}">
+            {% if business_banner_url %}<img src="{{ business_banner_url }}" alt="" loading="lazy">{% endif %}
             <div class="nxt-business-logo-column">
                 {% if business_logo_url %}<img class="nxt-business-logo" src="{{ business_logo_url }}" alt="{{ business.name }} logo" loading="lazy">
                 {% else %}<div class="nxt-business-logo-placeholder" aria-hidden="true"><i class="bi bi-building"></i></div>{% endif %}
@@ -63,6 +57,7 @@
                 {% if business_social_links.instagram %}<a href="{{ business_social_links.instagram }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram" aria-hidden="true"></i><span>Instagram</span></a>{% endif %}
                 {% if business_social_links.linkedin %}<a href="{{ business_social_links.linkedin }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-linkedin" aria-hidden="true"></i><span>LinkedIn</span></a>{% endif %}
             </nav>{% endif %}
+            {% if public_card %}<div class="nxt-person-actions"><a class="btn btn-primary" href="{% url 'download_vcard' card.public_token %}"><i class="bi bi-person-plus" aria-hidden="true"></i>Save Contact</a></div>{% endif %}
         </div>
     </section>
 
@@ -79,6 +74,6 @@
     </section>
 
     {% if website_url %}<section class="nxt-business-explore" aria-labelledby="nxt-explore-heading"><div><div class="eyebrow">{% if business.profile_type == "ORGANIZATION" and business.organization_category == "EDUCATIONAL_INSTITUTE" %}Learn more{% else %}Continue exploring{% endif %}</div><h2 id="nxt-explore-heading">Explore More</h2><p>{% if business.profile_type == "ORGANIZATION" and business.organization_category == "EDUCATIONAL_INSTITUTE" %}Visit the official website for more information about the institute and its programs.{% else %}Discover more from {{ business.name }} on its website.{% endif %}</p></div><a class="btn btn-primary" href="{{ website_url }}" target="_blank" rel="noopener noreferrer">{% if business.profile_type == "ORGANIZATION" %}Visit Official Website{% else %}Visit Business Website{% endif %}<i class="bi bi-arrow-up-right ms-1" aria-hidden="true"></i></a></section>{% endif %}
-    {% if public_card %}<div class="nxt-business-qr-action"><button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#profileQr" aria-expanded="false" aria-controls="profileQr"><i class="bi bi-qr-code me-1" aria-hidden="true"></i>Show QR codes</button><div class="collapse" id="profileQr"><div class="profile-qr-panel"><strong>Offline contact QR</strong><p class="small text-muted">A contact snapshot with this profile link. Printed QR information does not update automatically.</p><img src="{% url 'offline_contact_qr' card.public_token %}" alt="Offline contact QR for {{ business.name }}"><hr><strong>Online profile QR</strong><p class="small text-muted">Scan to open this live profile.</p><img src="{% url 'card_qr' card.public_token %}" alt="Online profile QR for {{ business.name }}"></div></div></div>{% endif %}
+    {% if public_card %}<div class="nxt-business-qr-action"><button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#profileQr" aria-expanded="false" aria-controls="profileQr"><i class="bi bi-qr-code me-1" aria-hidden="true"></i>Show QR codes</button><div class="collapse" id="profileQr"><div class="profile-qr-panel"><strong>Scan QR - Save Contact Offline</strong><p class="small text-muted">This QR contains a contact snapshot and profile link. Printed contact information does not update automatically.</p><img src="{% url 'offline_contact_qr' card.public_token %}" alt="Offline contact QR for {{ business.name }}"><hr><strong>Tap NFC - Open Online Profile</strong><p class="small text-muted">This QR alternative opens the live profile when scanned with internet access.</p><img src="{% url 'card_qr' card.public_token %}" alt="Online profile QR for {{ business.name }}"></div></div></div>{% endif %}
     <p class="nxt-business-footnote">Shared with NexTap · Tap once. Share everything.</p>
 </div>

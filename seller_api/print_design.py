@@ -4,6 +4,7 @@ import qrcode
 from PIL import Image, ImageDraw, ImageFont
 
 from cards.contact import build_vcard
+from cards.presentation import resolve_business_identity
 from orders.models import CardAllocation
 
 
@@ -61,10 +62,19 @@ def _draw_nfc_mark(draw, center, color):
 def build_card_print_images(public_url):
     card = public_url if hasattr(public_url, "public_token") else None
     allocation = None
+    order = None
+    representative = None
     if card:
-        allocation = CardAllocation.objects.select_related("order__product").filter(card=card).first()
+        allocation = CardAllocation.objects.select_related(
+            "order", "representative", "order__business_profile",
+        ).filter(card=card).first()
+        order = allocation.order if allocation else getattr(card, "assigned_order", None)
+        representative = (
+            allocation.representative
+            if allocation and allocation.representative_id
+            else card.representative
+        )
         public_url = card.public_url
-    new_print = bool(card and allocation and allocation.order.offline_contact_print)
     width, height = CR80_SIZE
     navy = "#07111f"
     cyan = "#16d9ff"
@@ -91,7 +101,7 @@ def build_card_print_images(public_url):
         font=_font(68, bold=True),
     )
     front_draw.rectangle((82, 178, 238, 190), fill=cyan)
-    if not new_print:
+    if not card:
         front_draw.text(
             (82, 232),
             "Tap once. Share everything.",
@@ -104,14 +114,16 @@ def build_card_print_images(public_url):
         fill=cyan,
         font=_font(23, bold=True),
     )
-    _draw_nfc_mark(
-        front_draw,
-        (width - 210, height // 2 + 80) if new_print else (width - 225, height // 2 + 28),
-        cyan,
-    )
-    if new_print:
+    _draw_nfc_mark(front_draw, (width - 210, height // 2 + 80), cyan)
+    if card:
         if card.business_profile:
             business = card.business_profile
+            identity = resolve_business_identity(
+                business,
+                getattr(card.owner, "profile", None),
+                order,
+                representative,
+            )
             name_x = 178 if business.logo else 82
             if business.logo:
                 try:
@@ -121,13 +133,16 @@ def build_card_print_images(public_url):
                 except (OSError, ValueError):
                     pass
             front_draw.text((name_x, 220), business.name[:23], fill=white, font=_font(34, bold=True))
-            if card.representative:
-                front_draw.text((name_x, 278), card.representative.name[:25], fill=cyan, font=_font(27, bold=True))
-                front_draw.text((name_x, 319), card.representative.designation[:35], fill=muted, font=_font(22))
+            if identity:
+                front_draw.text((name_x, 278), identity["name"][:25], fill=cyan, font=_font(27, bold=True))
+                if identity["designation"]:
+                    front_draw.text((name_x, 319), identity["designation"][:35], fill=muted, font=_font(22))
         else:
-            profile = card.owner.profile
-            front_draw.text((82, 225), profile.public_name[:23], fill=white, font=_font(34, bold=True))
-            front_draw.text((82, 278), profile.job_title[:35], fill=muted, font=_font(23))
+            profile = getattr(card.owner, "profile", None)
+            if profile:
+                front_draw.text((82, 225), profile.public_name[:23], fill=white, font=_font(34, bold=True))
+                if profile.job_title:
+                    front_draw.text((82, 278), profile.job_title[:35], fill=muted, font=_font(23))
 
     back = Image.new("RGB", CR80_SIZE, white)
     back_draw = ImageDraw.Draw(back)
@@ -139,9 +154,12 @@ def build_card_print_images(public_url):
         font=_font(38, bold=True),
     )
 
-    offline = new_print
+    offline = card is not None
     qr_value = build_vcard(card, offline=True) if offline else public_url
-    qr = qrcode.make(qr_value).convert("RGB")
+    qr = qrcode.make(
+        qr_value,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+    ).convert("RGB")
     qr_size = 430 if offline else 390
     qr = qr.resize(
         (qr_size, qr_size),
@@ -165,24 +183,26 @@ def build_card_print_images(public_url):
 
     copy_x = 520
     back_draw.text(
-        (copy_x, 180),
-        "OFFLINE CONTACT QR" if offline else "SCAN TO CONNECT",
+        (copy_x, 150),
+        "Offline Contact - Scan to Save" if offline else "Scan to Open Profile",
         fill=blue,
-        font=_font(25, bold=True),
+        font=_font(21, bold=True),
     )
-    back_draw.text(
-        (copy_x, 235),
-        "Save contact offline.\nOpen profile later." if offline else "Your digital profile,\nready in one tap.",
-        fill=navy,
-        font=_font(34, bold=True),
-        spacing=10,
-    )
-    back_draw.text(
-        (copy_x, 360),
-        "Contact snapshot at print time." if offline else "No app required.",
-        fill="#4b6075",
-        font=_font(25),
-    )
+    if offline:
+        back_draw.text((copy_x, 210), "TAP NFC", fill=blue, font=_font(20, bold=True))
+        back_draw.text((copy_x, 238), "Open online profile", fill=navy, font=_font(25, bold=True))
+        back_draw.text((copy_x, 300), "SCAN QR", fill=blue, font=_font(20, bold=True))
+        back_draw.text((copy_x, 328), "Save contact offline", fill=navy, font=_font(25, bold=True))
+        back_draw.text((copy_x, 383), "Printed contact is a snapshot.", fill="#4b6075", font=_font(19))
+    else:
+        back_draw.text(
+            (copy_x, 235),
+            "Tap NFC to open\nthe online profile.",
+            fill=navy,
+            font=_font(30, bold=True),
+            spacing=10,
+        )
+        back_draw.text((copy_x, 360), "Internet is needed to view it.", fill="#4b6075", font=_font(20))
     back_draw.rectangle(
         (copy_x, 420, width - 74, 428),
         fill=cyan,

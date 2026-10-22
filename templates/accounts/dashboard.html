@@ -96,7 +96,7 @@
                     </div>
                     {% if card and card.status == "ACTIVE" %}
                         <div class="qr-frame"><img src="{% url 'card_qr' card.public_token %}" alt="QR code for your public NexTap profile"></div>
-                        <p class="small text-muted mt-3 mb-0">Scan to open your public digital card.</p>
+                        <p class="small text-muted mt-3 mb-0">This QR opens your online profile and needs internet. Use the contact QR on your public profile to save contact details offline.</p>
                     {% else %}
                         <div class="empty-state py-3 px-0">
                             <div class="empty-state-icon"><i class="bi bi-qr-code-scan"></i></div>

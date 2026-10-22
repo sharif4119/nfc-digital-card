@@ -16,7 +16,6 @@
     <div class="container px-3">
         <article class="{% if business %}digital-profile-card{% else %}personal-digital-profile{% endif %}">
             {% if business %}
-            <div class="profile-cover"></div>
             <div class="profile-content">
                 {% include "profiles/_combined_business_profile.html" with public_card=True preview=False %}
                 <section class="mt-5" aria-labelledby="inquiry-title"><h2 id="inquiry-title" class="h5 fw-bold">Ask this business a question</h2>
