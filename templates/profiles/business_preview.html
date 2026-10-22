@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{% if business %}{{ business.name }} · {{ profile_term }} Profile Preview{% else %}Business Profile Preview · NexTap{% endif %}{% endblock %}
+{% block content %}
+<section class="page-shell nxt-business-page nxt-business-preview-page">
+    <div class="container">
+        <header class="nxt-business-page-heading">
+            <div>
+                <div class="eyebrow">Private preview</div>
+                <h1>{% if is_organization %}Organization Profile Preview{% else %}Business Profile Preview{% endif %}</h1>
+                <p>{% if is_organization %}Review how your saved organization profile appears to customers.{% else %}Review how your saved business profile appears to customers.{% endif %}</p>
+            </div>
+            <nav class="nxt-business-actions" aria-label="Business profile navigation">
+                {% if business %}<a class="btn btn-outline-secondary" href="{% url 'business_cards' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i>Back to {{ profile_term }} Profile</a>{% else %}<a class="btn btn-outline-secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i>Back to Dashboard</a>{% endif %}
+                <a class="btn btn-primary" href="{% url 'business_edit' %}"><i class="bi bi-pencil" aria-hidden="true"></i>Edit {{ profile_term }} Profile</a>
+            </nav>
+        </header>
+
+        {% if business %}
+            {% if allocations %}
+                <form method="get" class="nxt-preview-selector" aria-label="Choose a card to preview">
+                    <label class="form-label" for="preview-allocation">Preview identity</label>
+                    <select class="form-select" id="preview-allocation" name="allocation" onchange="this.form.submit()">
+                        {% if owner_preview_allowed %}<option value="owner"{% if not selected_allocation %} selected{% endif %}>Business Single · Owner identity</option>{% endif %}
+                        {% for allocation in allocations %}<option value="{{ allocation.pk }}"{% if selected_allocation.pk == allocation.pk %} selected{% endif %}>Order #{{ allocation.order_id }} · Card {{ allocation.position }}{% if allocation.representative %} · {{ allocation.representative.name }}{% else %} · Representative not assigned{% endif %}</option>{% endfor %}
+                    </select>
+                </form>
+            {% endif %}
+            {% include "profiles/_combined_business_profile.html" with preview=True public_card=False %}
+        {% else %}
+            <section class="nxt-business-identity nxt-business-no-profile">
+                <div class="nxt-business-logo-placeholder" aria-hidden="true"><i class="bi bi-building" aria-hidden="true"></i></div>
+                <div><h2>Your business profile isn’t saved yet</h2><p>Add your business details to preview them here.</p><a class="btn btn-primary" href="{% url 'business_edit' %}">Create Business Profile</a></div>
+            </section>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

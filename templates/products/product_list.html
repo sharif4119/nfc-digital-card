@@ -6,76 +6,47 @@
 <section class="page-shell">
     <div class="container">
         <div class="page-heading">
-            <div><div class="eyebrow">The NexTap collection</div><h1>Choose your NFC card</h1><p>Premium physical cards connected to a digital profile you can update anytime.</p></div>
+            <div>
+                <div class="eyebrow">The NexTap collection</div>
+                <h1>Choose your NFC card</h1>
+                <p>Premium physical cards connected to a digital profile you can update anytime.</p>
+            </div>
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Home</a>
         </div>
-        <div class="row g-3 mb-4"><div class="col-md-6"><div class="premium-card p-4 h-100"><h2 class="h5">Personal NFC Card</h2><p class="mb-0">Your individual identity, contacts and links on one compact card.</p></div></div><div class="col-md-6"><div class="premium-card p-4 h-100"><h2 class="h5">Business NFC Card</h2><p class="mb-0">One shared business profile with one card or separate cards for your team.</p></div></div></div>
 
-        <div class="row g-4">
-            {% for product in products %}
-                <div class="col-md-6 col-xl-4">
-                    <article class="product-grid-card">
-                        <div class="product-media">
-                            <div class="product-image-wrap">
-                                {% if product.image %}
-                                    <img
-                                        src="{{ product.image.url }}"
-                                        alt="{{ product.name }}"
-                                        class="product-image"
-                                        onerror="
-                                            this.style.display='none';
-                                            this.nextElementSibling.style.display='flex';
-                                        "
-                                    >
-
-                                    <div
-                                        class="product-placeholder-card"
-                                        style="display:none;"
-                                    >
-                                        <div class="brand-lockup">
-                                            <span class="brand-mark">N</span>
-                                            <span>NexTap</span>
-                                        </div>
-
-                                        <span>Tap once. Share everything.</span>
-                                    </div>
-                                {% else %}
-                                    <div class="product-placeholder-card">
-                                        <div class="brand-lockup">
-                                            <span class="brand-mark">N</span>
-                                            <span>NexTap</span>
-                                        </div>
-
-                                        <span>Tap once. Share everything.</span>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <span class="availability-badge"><span class="availability-dot"></span>Available</span>
-                        </div>
-                        <div class="product-card-content">
-                            <div class="card-kicker">{{ product.get_card_category_display }}</div>
-                            <h2>{{ product.name }}</h2>
-                            <p>{{ product.description|default:"A premium NFC card linked to your live NexTap profile."|truncatewords:22 }}</p>
-                            <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
-                                <div class="product-price">৳{{ product.price }} <small>per card</small></div>
-                            </div>
-                            <div class="d-grid gap-2">
-                                <a href="{% url 'product_detail' product.id %}" class="btn btn-primary">View Details <i class="bi bi-arrow-right"></i></a>
-                                <a href="{% url 'create_order' product.id %}" class="btn btn-outline-primary">Order Card</a>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-            {% empty %}
-                <div class="col-12">
-                    <div class="premium-card empty-state">
-                        <div class="empty-state-icon"><i class="bi bi-credit-card"></i></div>
-                        <h2>No cards available right now</h2>
-                        <p>The card collection will appear here as soon as products become available.</p>
-                        <a href="{% url 'home' %}" class="btn btn-outline-primary">Back Home</a>
+        <section class="catalog-section" aria-labelledby="personal-cards-heading">
+            <header class="catalog-section-heading">
+                <div class="eyebrow">For individuals</div>
+                <h2 id="personal-cards-heading">Personal NFC Cards</h2>
+                <p>Share your professional details and contact links from one personal card.</p>
+            </header>
+            <div class="row g-4">
+                {% for product in personal_products %}
+                    <div class="col-md-6 col-xl-4">
+                        {% include "products/_product_card.html" with product=product only %}
                     </div>
-                </div>
-            {% endfor %}
-        </div>
+                {% empty %}
+                    <div class="col-12"><p class="catalog-empty">There are no Personal NFC Cards available right now.</p></div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="catalog-section" aria-labelledby="business-cards-heading">
+            <header class="catalog-section-heading">
+                <div class="eyebrow">For teams and brands</div>
+                <h2 id="business-cards-heading">Business NFC Cards</h2>
+                <p>Connect your shared business profile to a single card or a team of representatives.</p>
+            </header>
+            <div class="row g-4">
+                {% for product in business_products %}
+                    <div class="col-md-6 col-xl-4">
+                        {% include "products/_product_card.html" with product=product only %}
+                    </div>
+                {% empty %}
+                    <div class="col-12"><p class="catalog-empty">There are no Business NFC Cards available right now.</p></div>
+                {% endfor %}
+            </div>
+        </section>
     </div>
 </section>
 {% endblock %}

@@ -55,6 +55,15 @@ class OrderFlowTests(TestCase):
             "Payment and confirmation will be handled by the seller.",
         )
         self.assertNotContains(response, "Pay Now")
+        self.assertContains(response, reverse("order_list"))
+        self.assertContains(response, "Back to My Orders")
+
+    def test_create_order_has_back_link_to_product_details(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("create_order", args=[self.product.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("product_detail", args=[self.product.pk]))
+        self.assertContains(response, "Back to Product Details")
 
     def test_logged_out_user_cannot_order(self):
         response = self.client.get(

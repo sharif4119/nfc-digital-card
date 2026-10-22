@@ -121,7 +121,7 @@ class CustomerRegistrationTests(TestCase):
         user = User.objects.get(email="eight@example.com")
         self.assertTrue(user.check_password("48271936"))
 
-    def test_password_shorter_than_eight_characters_is_rejected(self):
+    def test_nonempty_password_shorter_than_eight_characters_is_accepted(self):
         response = self.client.post(
             reverse("register"),
             self.registration_data(
@@ -131,27 +131,76 @@ class CustomerRegistrationTests(TestCase):
             ),
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            "This password is too short",
-        )
-        self.assertFalse(
-            User.objects.filter(email="short@example.com").exists()
-        )
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertTrue(User.objects.get(email="short@example.com").check_password("5839172"))
 
-    def test_common_password_is_still_rejected(self):
-        response = self.client.post(
+    def test_registration_accepts_common_numeric_alphabetic_and_mixed_passwords(self):
+        cases = [
+            ("common", "password"),
+            ("numeric", "12345"),
+            ("letters", "letters"),
+            ("mixed", "A!2x"),
+        ]
+        for label, password in cases:
+            with self.subTest(password=password):
+                response = self.client.post(
+                    reverse("register"),
+                    self.registration_data(
+                        label,
+                        f"{label}@example.com",
+                        password=password,
+                    ),
+                )
+                self.assertRedirects(response, reverse("dashboard"))
+                customer = User.objects.get(email=f"{label}@example.com")
+                self.assertTrue(customer.check_password(password))
+                self.client.logout()
+
+    def test_registration_requires_nonempty_matching_passwords(self):
+        empty_response = self.client.post(
             reverse("register"),
-            self.registration_data(
-                "Common Password",
-                "common@example.com",
-                password="password",
-            ),
+            {
+                **self.registration_data("Empty Password", "empty@example.com"),
+                "password1": "",
+                "password2": "",
+            },
         )
+        self.assertEqual(empty_response.status_code, 200)
+        self.assertContains(empty_response, "This field is required.")
+        self.assertFalse(User.objects.filter(email="empty@example.com").exists())
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "This password is too common")
+        mismatch_data = self.registration_data("Mismatch", "mismatch@example.com")
+        mismatch_data["password2"] = "different"
+        mismatch_response = self.client.post(reverse("register"), mismatch_data)
+        self.assertEqual(mismatch_response.status_code, 200)
+        self.assertContains(mismatch_response, "The two password fields didn’t match")
+        self.assertFalse(User.objects.filter(email="mismatch@example.com").exists())
+
+    def test_registration_password_help_matches_relaxed_rules(self):
+        response = self.client.get(reverse("register"))
+        self.assertContains(response, "Choose any non-empty password")
+        self.assertNotContains(response, "at least 8 characters")
+
+    def test_dashboard_business_actions_are_inside_non_overlapping_content(self):
+        from profiles.models import BusinessProfile
+
+        user = User.objects.create_user(username="dashboard-customer", password="pass")
+        self.client.force_login(user)
+        response = self.client.get(reverse("dashboard"))
+        html = response.content.decode()
+        hero_end = html.index("</section>", html.index('class="dashboard-hero"'))
+        content_start = html.index('class="dashboard-content"')
+        button_start = html.index("Create Business Profile")
+        self.assertGreater(button_start, content_start)
+        self.assertGreater(button_start, hero_end)
+        self.assertContains(response, 'class="dashboard-actions')
+
+        BusinessProfile.objects.create(
+            owner=user, name="Example Organization", profile_type="ORGANIZATION",
+        )
+        organization_dashboard = self.client.get(reverse("dashboard"))
+        self.assertContains(organization_dashboard, "Edit Organization Profile")
+        self.assertContains(organization_dashboard, "Organization inquiries")
 
     def test_registration_and_login_have_accessible_password_toggles(self):
         register_response = self.client.get(reverse("register"))
@@ -177,6 +226,10 @@ class CustomerRegistrationTests(TestCase):
         )
         self.assertContains(login_response, 'type="button"')
         self.assertContains(login_response, "Email or username")
+        self.assertContains(register_response, reverse("home"))
+        self.assertContains(register_response, "Back to Home")
+        self.assertContains(login_response, reverse("home"))
+        self.assertContains(login_response, "Back to Home")
 
     def test_new_customer_can_login_with_email_and_sees_display_name(self):
         self.client.post(

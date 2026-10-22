@@ -5,7 +5,7 @@
 {% block content %}
 <section class="page-shell">
     <div class="container">
-        <a href="{% url 'order_list' %}" class="d-inline-flex align-items-center gap-2 text-muted fw-semibold mb-4"><i class="bi bi-arrow-left"></i>Back to orders</a>
+        <a href="{% url 'order_list' %}" class="btn btn-outline-secondary btn-sm mb-4"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to My Orders</a>
         <div class="page-heading">
             <div><div class="eyebrow">Order summary</div><h1>Order #{{ order.id }}</h1><p>Review your product, delivery details, payment state, and NFC card assignment.</p></div>
             <span class="status-pill status-{{ order.order_status|lower }}">{{ order.get_order_status_display }}</span>

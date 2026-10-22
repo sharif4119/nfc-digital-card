@@ -57,6 +57,15 @@ class BusinessCardFlowTests(TestCase):
         self.assertEqual(multiple.allocations.count(), 3)
         self.assertEqual(multiple.business_profile, self.business)
 
+    def test_business_card_pages_have_parent_navigation(self):
+        order = self._order(self.product, "SINGLE", 1)
+        allocation = order.allocations.first()
+        cards_response = self.client.get(reverse("business_cards"))
+        self.assertContains(cards_response, reverse("dashboard"))
+        representative_response = self.client.get(reverse("representative_edit", args=[allocation.id]))
+        self.assertContains(representative_response, reverse("business_cards"))
+        self.assertContains(representative_response, "Back to Business Cards")
+
     def test_multiple_prepare_creates_unique_cards_and_keeps_legacy_field(self):
         order = self._order(self.product, "MULTIPLE", 2)
         allocations = list(order.allocations.all())

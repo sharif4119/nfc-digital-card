@@ -52,9 +52,18 @@ class RegisterForm(UserCreationForm):
             )
 
         self.fields["password1"].help_text = (
-            "Use at least 8 characters. Uppercase letters and symbols "
-            "are not required; very common passwords are not accepted."
+            "Choose any non-empty password. Letters, numbers, and common "
+            "passwords are accepted; confirmation must match."
         )
+
+    def validate_password_for_user(self, user, password_field_name="password2"):
+        """Skip complexity validators for customer signup only.
+
+        Password confirmation remains enforced by UserCreationForm, and its
+        save path still hashes passwords with Django's configured hasher.
+        Administrator password forms continue using AUTH_PASSWORD_VALIDATORS.
+        """
+        return None
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().casefold()

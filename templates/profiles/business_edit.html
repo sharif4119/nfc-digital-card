@@ -1,16 +1,165 @@
 {% extends "base.html" %}
-{% block title %}Business Profile{% endblock %}
+{% load static %}
+{% block title %}Edit {{ profile_term }} Profile · NexTap{% endblock %}
 {% block content %}
-<section class="page-shell"><div class="container" style="max-width:960px">
-    <div class="page-heading"><div><div class="eyebrow">Business identity</div><h1>{% if business %}Edit business profile{% else %}Create business profile{% endif %}</h1><p>These details appear on every card linked to your business.</p></div></div>
-    <form method="post" enctype="multipart/form-data" class="premium-card form-card"><div class="premium-card-body form-shell">
-        {% csrf_token %}{{ form.non_field_errors }}
-        <div class="row g-3">{% for field in form %}<div class="col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
-        <hr class="my-4"><h2 class="h5 fw-bold">Featured products or services</h2><p class="small text-muted">Show up to six highlights. Visitors can follow your website link for ordering.</p>
-        {{ offerings.management_form }}{{ offerings.non_form_errors }}
-        {% for item in offerings %}<div class="border rounded-4 p-3 mb-3"><div class="row g-3">{% for field in item.visible_fields %}<div class="col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>{% for hidden in item.hidden_fields %}{{ hidden }}{% endfor %}</div>{% endfor %}
-        <button class="btn btn-primary" type="submit">Save business profile</button>
-        <a class="btn btn-outline-secondary" href="{% url 'business_cards' %}">Back to cards</a>
-    </div></form>
-</div></section>
+<section class="page-shell nxt-business-page nxt-business-edit-page">
+    <div class="container">
+        <header class="nxt-business-page-heading">
+            <div>
+                <div class="eyebrow" data-dynamic-label="eyebrow">{% if is_organization %}Organization identity{% else %}Business identity{% endif %}</div>
+                <h1 data-dynamic-label="edit_title">Edit {{ profile_term }} Profile</h1>
+                <p data-dynamic-label="edit_description">{% if is_organization %}Manage your organization information and online presence.{% else %}Manage your business information and online presence.{% endif %}</p>
+            </div>
+            <nav class="nxt-business-actions" aria-label="Business profile navigation">
+                <a class="btn btn-outline-primary" href="{% url 'business_profile_preview' %}"><i class="bi bi-eye" aria-hidden="true"></i><span data-dynamic-label="preview_link">Preview {{ profile_term }} Profile</span></a>
+                <a class="btn btn-outline-secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i>Back to Dashboard</a>
+            </nav>
+        </header>
+
+        <form method="post" enctype="multipart/form-data" class="nxt-business-form-card" data-business-form>
+            {% csrf_token %}
+            {% if has_validation_errors %}
+                <div class="alert alert-danger nxt-business-error-summary" role="alert" tabindex="-1" data-form-error-summary>
+                    <h2>Please review the highlighted fields.</h2>
+                    <ul>
+                        {% for field in form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}
+                        {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                        {% for error in offerings.non_form_errors %}<li>{{ error }}</li>{% endfor %}
+                        {% for item in offerings %}{% for field in item.visible_fields %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}"><span data-dynamic-label="offering_error_prefix">{% if is_organization and organization_category == "EDUCATIONAL_INSTITUTE" %}Academic Program{% else %}Product / Service{% endif %}</span> {{ forloop.parentloop.parentloop.counter }} — {{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}{% endfor %}
+                    </ul>
+                    <p>Entered text is retained. Reselect an image after a validation error if your browser clears the file input.</p>
+                </div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.profile_type.id_for_label }}">Profile Type</label>
+                    {{ form.profile_type }}
+                    {% for error in form.profile_type.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6" data-organization-field>
+                    <label class="form-label" for="{{ form.organization_category.id_for_label }}">Organization Category</label>
+                    {{ form.organization_category }}
+                    {% for error in form.organization_category.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" data-dynamic-label="name_label" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                    {{ form.name }}
+                    {% for error in form.name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" data-dynamic-label="logo_label" for="{{ form.logo.id_for_label }}">{{ form.logo.label }}</label>
+                    {{ form.logo }}
+                    <div class="form-text">Choose a new image to replace the saved logo. Leave this blank to keep it.</div>
+                    {% for error in form.logo.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6" data-organization-field>
+                    <label class="form-label" data-dynamic-label="banner_label" for="{{ form.banner.id_for_label }}">Organization Cover Image (optional)</label>
+                    {{ form.banner }}
+                    <div class="form-text">Choose an image to replace the saved cover. Leave blank to keep it.</div>
+                    {% for error in form.banner.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" data-dynamic-label="description_label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                    {{ form.description }}
+                    {% for error in form.description.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12"><h2 class="nxt-business-contact-heading" data-dynamic-label="contact_heading">{{ profile_term }} Contact Information</h2></div>
+                <div class="col-md-6">
+                    <label class="form-label" data-dynamic-label="phone_label" for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+                    {{ form.phone }}
+                    {% for error in form.phone.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" data-dynamic-label="email_label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% for error in form.email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" data-dynamic-label="website_label" for="{{ form.website.id_for_label }}">{{ form.website.label }}</label>
+                    {{ form.website }}
+                    {% for error in form.website.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" data-dynamic-label="address_label" for="{{ form.address.id_for_label }}">{{ form.address.label }}</label>
+                    {{ form.address }}
+                    {% for error in form.address.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.facebook.id_for_label }}">Facebook</label>
+                    {{ form.facebook }}
+                    {% for error in form.facebook.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.instagram.id_for_label }}">Instagram</label>
+                    {{ form.instagram }}
+                    {% for error in form.instagram.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.linkedin.id_for_label }}">LinkedIn</label>
+                    {{ form.linkedin }}
+                    {% for error in form.linkedin.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.whatsapp.id_for_label }}">WhatsApp</label>
+                    {{ form.whatsapp }}
+                    {% for error in form.whatsapp.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <section class="nxt-business-privacy" data-owner-privacy aria-labelledby="nxt-owner-privacy-title">
+                <div class="nxt-business-section-heading"><h2 id="nxt-owner-privacy-title">Personal identity and privacy</h2><p>These choices apply to Business Single cards. Multiple-card pages use each card’s assigned representative.</p></div>
+                {% for field in form %}{% if field.name == "show_owner_identity" or field.name == "share_owner_phone" or field.name == "share_owner_email" or field.name == "share_owner_whatsapp" or field.name == "share_owner_website" or field.name == "share_owner_address" or field.name == "share_owner_social" %}
+                    <div class="form-check nxt-privacy-option">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+                {% endif %}{% endfor %}
+            </section>
+
+            <section class="nxt-business-offerings" aria-labelledby="nxt-business-offerings-title">
+                <div class="nxt-business-section-heading">
+                    <h2 id="nxt-business-offerings-title" data-dynamic-label="offerings_heading">{% if is_organization and organization_category == "EDUCATIONAL_INSTITUTE" %}Academic Programs{% elif is_organization %}Products &amp; Services{% else %}Featured Products &amp; Services{% endif %}</h2>
+                    <p data-dynamic-label="offerings_description">{% if is_organization and organization_category == "EDUCATIONAL_INSTITUTE" %}Add up to six academic programs to highlight on your profile.{% elif is_organization %}Add up to six products or services to highlight on your organization profile.{% else %}Add up to six products or services to highlight on your profile.{% endif %}</p>
+                </div>
+                {{ offerings.management_form }}
+                {% for error in offerings.non_form_errors %}<div class="alert alert-danger py-2" role="alert">{{ error }}</div>{% endfor %}
+                <div class="row g-3">
+                    {% for item in offerings %}
+                        <div class="col-12">
+                            <fieldset class="nxt-business-offering-form">
+                                <legend><span data-dynamic-label="offering_legend">{% if is_organization and organization_category == "EDUCATIONAL_INSTITUTE" %}Academic Program{% else %}Product / Service{% endif %}</span> {{ forloop.counter }}</legend>
+                                {% for hidden in item.hidden_fields %}{{ hidden }}{% endfor %}
+                                <div class="row g-3">
+                                    {% for field in item.visible_fields %}
+                                        {% if field.name == "DELETE" %}
+                                            <div class="col-12">
+                                                <div class="form-check nxt-business-delete-check">
+                                                    {{ field }}
+                                                    <label class="form-check-label" for="{{ field.id_for_label }}">Remove this saved item</label>
+                                                    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="{% if field.name == 'description' %}col-12{% else %}col-md-6{% endif %}">
+                                                <label class="form-label" data-dynamic-offering-label="{{ field.name }}" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                                {% if field.name == "image" %}<div class="form-text">Optional image · up to 5 MB</div>{% endif %}
+                                                {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </fieldset>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <div class="nxt-business-form-actions">
+                <button type="submit" name="action" value="save" class="btn btn-primary"><i class="bi bi-check2-circle" aria-hidden="true"></i><span data-dynamic-label="save_button">Save {{ profile_term }} Profile</span></button>
+                <button type="submit" name="action" value="preview" class="btn btn-outline-primary"><i class="bi bi-eye" aria-hidden="true"></i><span data-dynamic-label="save_preview_button">Save &amp; Preview {{ profile_term }} Profile</span></button>
+            </div>
+        </form>
+    </div>
+</section>
+<script src="{% static 'js/form-validation.js' %}" defer></script>
+<script src="{% static 'js/business-profile-form.js' %}" defer></script>
 {% endblock %}
