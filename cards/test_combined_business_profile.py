@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -49,6 +50,7 @@ class CombinedBusinessProfileTests(TestCase):
         post = {
             "profile_type": "ORGANIZATION", "organization_category": "EDUCATIONAL_INSTITUTE",
             "name": "Learning Centre", "description": "Programs and learning", "website": "example.edu",
+            "show_owner_identity": "on",
             "offerings-TOTAL_FORMS": "6", "offerings-INITIAL_FORMS": "0",
             "offerings-MIN_NUM_FORMS": "0", "offerings-MAX_NUM_FORMS": "6",
             "offerings-0-name": "Computing", "offerings-0-position": "1", "action": "preview",
@@ -60,7 +62,7 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertEqual(self.business.organization_category, "EDUCATIONAL_INSTITUTE")
         preview = self.client.get(response.url)
         self.assertContains(preview, "Academic Programs")
-        self.assertContains(preview, "Representative details will appear after a person is assigned to this card.")
+        self.assertContains(preview, "Assign a representative to this card to include their details in the preview.")
         self.assertContains(preview, "Computing")
 
     def test_organization_company_uses_products_and_services_label(self):
@@ -84,6 +86,8 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertNotContains(response, "Account Purchaser")
 
     def test_business_multiple_cards_use_only_their_own_representatives(self):
+        self.business.show_owner_identity = True
+        self.business.save()
         first_rep = BusinessRepresentative.objects.create(business=self.business, name="Representative One")
         second_rep = BusinessRepresentative.objects.create(business=self.business, name="Representative Two")
         _, _, first = self._card(1, "MULTIPLE", first_rep)
@@ -99,6 +103,7 @@ class CombinedBusinessProfileTests(TestCase):
     def test_organization_identity_is_representative_first_and_uses_academic_heading(self):
         self.business.profile_type = "ORGANIZATION"
         self.business.organization_category = "EDUCATIONAL_INSTITUTE"
+        self.business.show_owner_identity = True
         self.business.save()
         rep = BusinessRepresentative.objects.create(
             business=self.business, name="Principal Person", designation="Principal",
@@ -111,6 +116,216 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertContains(response, "Academic Programs")
         self.assertContains(response, "principal@example.edu")
         self.assertNotContains(response, "Private Owner Name")
+
+    def test_public_business_page_has_no_empty_banner_or_generic_whatsapp_shortcut(self):
+        self.business.phone = "01700000001"
+        self.business.whatsapp = "8801700000001"
+        self.business.save()
+        _, _, card = self._card()
+
+        response = self.client.get(reverse("public_card", args=[card.public_token]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "profile-cover")
+        self.assertNotContains(response, "nxt-org-cover-placeholder")
+        self.assertNotContains(response, "whatsapp-float")
+        self.assertNotContains(response, "8801610395999")
+        self.assertNotContains(response, "nxt-person-identity")
+        self.assertContains(response, "nxt-business-identity")
+        self.assertContains(response, "wa.me/8801700000001")
+
+    def test_public_organization_page_has_no_empty_banner_but_keeps_logo_section(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.organization_category = "COMPANY"
+        self.business.show_owner_identity = True
+        self.business.save()
+        rep = BusinessRepresentative.objects.create(business=self.business, name="Assigned Representative")
+        _, _, card = self._card(rep=rep)
+
+        response = self.client.get(reverse("public_card", args=[card.public_token]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Assigned Representative")
+        self.assertContains(response, "nxt-business-logo-column")
+        self.assertNotContains(response, "nxt-org-cover-placeholder")
+        self.assertNotContains(response, "profile-cover")
+        self.assertNotContains(response, "whatsapp-float")
+        self.assertNotContains(response, "Private Owner Name")
+
+    def test_offline_contact_qr_contains_vcard_data_and_not_only_a_url(self):
+        self.profile.full_name = "Public Person"
+        self.profile.phone = "+8801700111222"
+        self.profile.email = "person@example.com"
+        self.profile.save()
+        card = NFCCard.objects.create(
+            card_uid="PERSONAL-OFFLINE-QR", owner=self.owner, status="ACTIVE",
+        )
+
+        with patch("cards.views.qrcode.make", wraps=__import__("qrcode").make) as make_qr:
+            response = self.client.get(reverse("offline_contact_qr", args=[card.public_token]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/png")
+        payload = make_qr.call_args.args[0]
+        self.assertIn("BEGIN:VCARD", payload)
+        self.assertIn("FN:Public Person", payload)
+        self.assertIn("TEL:+8801700111222", payload)
+        self.assertIn("EMAIL:person@example.com", payload)
+        self.assertIn(card.public_url, payload)
+        self.assertNotEqual(payload, card.public_url)
+
+    def test_personal_identity_setting_defaults_off_and_editor_explains_it(self):
+        self.assertFalse(self.business.show_owner_identity)
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("business_edit"))
+        self.assertContains(response, "Show Personal/Representative Information")
+        self.assertContains(response, "Display the owner or assigned representative above your business or organization details.")
+        self.business.profile_type = "ORGANIZATION"
+        self.business.save()
+        organization_editor = self.client.get(reverse("business_edit"))
+        self.assertContains(organization_editor, "Show Personal/Representative Information")
+
+    def test_business_identity_is_omitted_and_business_is_first_when_visibility_is_off(self):
+        self.business.phone = "01700000001"
+        self.business.save()
+        _, _, card = self._card()
+        response = self.client.get(reverse("public_card", args=[card.public_token]))
+        body = response.content.decode()
+        self.assertNotContains(response, "nxt-person-identity")
+        self.assertNotContains(response, "Identity not set yet")
+        self.assertNotContains(response, "Representative details will appear")
+        self.assertLess(body.index("nxt-business-identity"), body.index('<h2 id="nxt-business-name">'))
+        self.assertContains(response, "01700000001")
+
+    def test_identity_toggle_on_but_missing_person_has_no_public_placeholder(self):
+        self.business.show_owner_identity = True
+        self.business.save()
+        self.profile.full_name = ""
+        self.profile.save()
+        _, _, card = self._card()
+        response = self.client.get(reverse("public_card", args=[card.public_token]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "nxt-person-identity")
+        self.assertNotContains(response, "Identity not set yet")
+        self.client.force_login(self.owner)
+        preview = self.client.get(reverse("business_profile_preview"))
+        self.assertContains(preview, "Add your full name to your Personal Profile")
+
+    def test_business_multiple_visibility_off_hides_assigned_representative(self):
+        self.business.show_owner_identity = False
+        self.business.save()
+        rep = BusinessRepresentative.objects.create(
+            business=self.business, name="Assigned Rep Hidden", phone="+8801999888777", phone_public=True,
+        )
+        _, _, card = self._card(1, "MULTIPLE", rep)
+        response = self.client.get(reverse("public_card", args=[card.public_token]))
+        self.assertNotContains(response, "Assigned Rep Hidden")
+        self.assertNotContains(response, "nxt-person-identity")
+        vcard = build_vcard(card, offline=True)
+        self.assertNotIn("Assigned Rep Hidden", vcard)
+        self.assertNotIn("+8801999888777", vcard)
+        self.assertIn("ORG:NexTap Kitchen", vcard)
+
+    def test_company_and_educational_profiles_use_the_same_optional_identity_setting(self):
+        rep = BusinessRepresentative.objects.create(business=self.business, name="Org Representative")
+        _, _, card = self._card(rep=rep)
+        for category in ("COMPANY", "EDUCATIONAL_INSTITUTE"):
+            with self.subTest(category=category):
+                self.business.profile_type = "ORGANIZATION"
+                self.business.organization_category = category
+                self.business.show_owner_identity = False
+                self.business.save()
+                hidden = self.client.get(reverse("public_card", args=[card.public_token]))
+                self.assertNotContains(hidden, "Org Representative")
+                self.business.show_owner_identity = True
+                self.business.save()
+                visible = self.client.get(reverse("public_card", args=[card.public_token]))
+                self.assertContains(visible, "Org Representative")
+
+    def test_offline_vcard_never_contains_owner_identity_when_toggle_is_off(self):
+        self.profile.full_name = "Hidden Owner Identity"
+        self.profile.phone = "+8801700111222"
+        self.profile.email = "private@example.com"
+        self.profile.save()
+        self.business.phone = "+88025551234"
+        self.business.email = "office@example.com"
+        self.business.save()
+        _, _, card = self._card()
+        vcard = build_vcard(card, offline=True)
+        self.assertNotIn("Hidden Owner Identity", vcard)
+        self.assertNotIn("+8801700111222", vcard)
+        self.assertNotIn("private@example.com", vcard)
+        self.assertIn("ORG:NexTap Kitchen", vcard)
+        self.assertIn("office@example.com", vcard)
+        self.assertIn(card.public_url, vcard)
+
+    def test_organization_contact_qr_uses_its_assigned_representative_and_public_work_contacts(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.show_owner_identity = True
+        self.business.phone = "+88025551234"
+        self.business.email = "office@example.edu"
+        self.business.address = "Official Campus"
+        self.business.save()
+        rep = BusinessRepresentative.objects.create(
+            business=self.business, name="Assigned Principal", designation="Principal",
+            phone="+8801999888777", email="principal@example.edu", phone_public=True,
+            email_public=False,
+        )
+        order, allocation, card = self._card(rep=rep)
+
+        vcard = build_vcard(card, offline=True)
+
+        self.assertIn("FN:Assigned Principal", vcard)
+        self.assertIn("TITLE:Principal", vcard)
+        self.assertIn("ORG:NexTap Kitchen", vcard)
+        self.assertIn("TEL;TYPE=WORK:+8801999888777", vcard)
+        self.assertNotIn("principal@example.edu", vcard)
+        self.assertIn("office@example.edu", vcard)
+        self.assertIn("Official Campus", vcard)
+        self.assertIn(card.public_url, vcard)
+        self.assertNotIn("Account Purchaser", vcard)
+        self.assertNotIn("Private Owner Name", vcard)
+        self.assertEqual(allocation.representative, rep)
+
+    def test_offline_contact_snapshots_differ_for_distinct_representatives(self):
+        self.business.show_owner_identity = True
+        self.business.save()
+        first_rep = BusinessRepresentative.objects.create(
+            business=self.business, name="First Snapshot", phone="01711111111", phone_public=True,
+        )
+        second_rep = BusinessRepresentative.objects.create(
+            business=self.business, name="Second Snapshot", phone="01722222222", phone_public=True,
+        )
+        _, _, first_card = self._card(1, "MULTIPLE", first_rep)
+        _, _, second_card = self._card(2, "MULTIPLE", second_rep)
+
+        first_vcard = build_vcard(first_card, offline=True)
+        second_vcard = build_vcard(second_card, offline=True)
+
+        self.assertIn("FN:First Snapshot", first_vcard)
+        self.assertIn("01711111111", first_vcard)
+        self.assertNotIn("Second Snapshot", first_vcard)
+        self.assertIn("FN:Second Snapshot", second_vcard)
+        self.assertIn("01722222222", second_vcard)
+        self.assertNotIn("First Snapshot", second_vcard)
+
+    def test_personal_offline_vcard_escapes_unicode_and_folds_by_utf8_octets(self):
+        self.profile.full_name = "শাহরিয়ার, মিয়া; NexTap"
+        self.profile.bio = "যোগাযোগের জন্য স্বাগতম " * 12
+        self.profile.save()
+        self.owner.refresh_from_db()
+        card = NFCCard.objects.create(
+            card_uid="PERSONAL-UNICODE-VCARD", owner=self.owner, status="ACTIVE",
+        )
+
+        vcard = build_vcard(card, offline=True)
+        lines = vcard.rstrip("\r\n").split("\r\n")
+
+        self.assertIn("FN:শাহরিয়ার\\, মিয়া\\; NexTap", vcard)
+        self.assertIn(card.public_url, vcard)
+        self.assertLessEqual(max(len(line.encode("utf-8")) for line in lines), 75)
+        continuation_lines = [line for line in lines if line.startswith(" ")]
+        self.assertTrue(continuation_lines)
 
     def test_private_preview_selects_only_owner_allocations(self):
         rep = BusinessRepresentative.objects.create(business=self.business, name="Selected Representative")

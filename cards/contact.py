@@ -75,34 +75,41 @@ def build_vcard(card, *, offline=False):
         lines.append("ORG:" + escape(business.name))
         if identity and identity["designation"]:
             lines.append("TITLE:" + escape(identity["designation"]))
-        if identity and identity["bio"]:
+        if identity and identity["bio"] and not offline:
             lines.append("NOTE:" + escape(identity["bio"][:120] if offline else identity["bio"]))
+        public_contact_values = set()
+
+        def add_public_contact(prefix, value):
+            if value and value.strip() not in public_contact_values:
+                public_contact_values.add(value.strip())
+                lines.append(prefix + escape(value.strip()))
+
         if identity and identity["phone"]:
-            lines.append("TEL;TYPE=WORK:" + escape(identity["phone"]))
+            add_public_contact("TEL;TYPE=WORK:", identity["phone"])
         if identity and identity["email"]:
-            lines.append("EMAIL;TYPE=WORK:" + escape(identity["email"]))
+            add_public_contact("EMAIL;TYPE=WORK:", identity["email"])
         if identity and identity["whatsapp"]:
-            lines.append("TEL;TYPE=CELL:" + escape(identity["whatsapp"]))
+            add_public_contact("TEL;TYPE=CELL:", identity["whatsapp"])
         if business.whatsapp:
-            lines.append("TEL;TYPE=WORK:" + escape(business.whatsapp))
+            add_public_contact("TEL;TYPE=WORK:", business.whatsapp)
         if business.phone:
-            lines.append("TEL;TYPE=WORK:" + escape(business.phone))
+            add_public_contact("TEL;TYPE=WORK:", business.phone)
         if business.email:
-            lines.append("EMAIL;TYPE=WORK:" + escape(business.email))
+            add_public_contact("EMAIL;TYPE=WORK:", business.email)
         if business.website:
-            lines.append("URL:" + escape(business.website))
+            add_public_contact("URL:", business.website)
         if identity and identity["website"] and identity["website"] != business.website:
-            lines.append("URL;TYPE=HOME:" + escape(identity["website"]))
+            add_public_contact("URL;TYPE=HOME:", identity["website"])
         if identity:
             for social_name in ("facebook", "instagram", "linkedin", "github"):
                 if identity[social_name]:
                     lines.append("X-SOCIALPROFILE;TYPE=" + social_name.upper() + ":" + escape(identity[social_name]))
-        if business.description:
+        if business.description and not offline:
             lines.append("NOTE:" + escape(business.description[:120] if offline else business.description))
-        if business.address and not offline:
-            lines.append("ADR;TYPE=WORK:;;" + escape(business.address) + ";;;;")
-        if identity and identity["address"]:
-            lines.append("ADR;TYPE=HOME:;;" + escape(identity["address"]) + ";;;;")
+        if business.address and (not offline or len(business.address) <= 120):
+            lines.append("ADR;TYPE=WORK:;;" + escape(business.address[:120] if offline else business.address) + ";;;;")
+        if identity and identity["address"] and identity["address"] != business.address:
+            lines.append("ADR;TYPE=HOME:;;" + escape(identity["address"][:120] if offline else identity["address"]) + ";;;;")
     else:
         profile = card.owner.profile
         lines.extend(_personal_vcard_lines(profile, offline=offline))

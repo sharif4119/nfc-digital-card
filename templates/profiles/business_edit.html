@@ -108,9 +108,9 @@
             </div>
 
             <section class="nxt-business-privacy" data-owner-privacy aria-labelledby="nxt-owner-privacy-title">
-                <div class="nxt-business-section-heading"><h2 id="nxt-owner-privacy-title">Personal identity and privacy</h2><p>These choices apply to Business Single cards. Multiple-card pages use each card’s assigned representative.</p></div>
+                <div class="nxt-business-section-heading"><h2 id="nxt-owner-privacy-title">Personal identity and privacy</h2><p data-identity-privacy-description>Choose whether a person appears above your business or organization. Multiple-card pages use only each card’s assigned representative.</p></div>
                 {% for field in form %}{% if field.name == "show_owner_identity" or field.name == "share_owner_phone" or field.name == "share_owner_email" or field.name == "share_owner_whatsapp" or field.name == "share_owner_website" or field.name == "share_owner_address" or field.name == "share_owner_social" %}
-                    <div class="form-check nxt-privacy-option">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+                    <div class="form-check nxt-privacy-option"{% if field.name != "show_owner_identity" %} data-owner-contact-privacy{% endif %}>{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
                 {% endif %}{% endfor %}
             </section>
 

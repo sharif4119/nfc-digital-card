@@ -15,18 +15,21 @@ def _image_url(field):
 def resolve_business_identity(business, owner_profile=None, order=None, representative=None):
     """Return only the identity and contact fields explicitly eligible to be public.
 
-    Organization and multiple-card identities always come from that card's
-    representative. Small-business single cards may use the owner's profile,
-    but only when the owner has opted in to that identity.
+    The existing show_owner_identity setting is the shared public identity
+    switch. Small-business single cards may use the owner's profile; multiple
+    cards and organizations use only the representative assigned to that card.
     """
     if representative and representative.business_id != business.pk:
         representative = None
+
+    if not business.show_owner_identity:
+        return None
 
     is_organization = business.profile_type == "ORGANIZATION"
     order_type = getattr(order, "business_order_type", "") if order else ""
     requires_representative = is_organization or order_type == "MULTIPLE"
     if not requires_representative:
-        if business.show_owner_identity and owner_profile and owner_profile.full_name:
+        if owner_profile and owner_profile.full_name:
             return {
                 "kind": "owner", "name": owner_profile.full_name,
                 "designation": owner_profile.job_title, "bio": owner_profile.bio,
@@ -58,8 +61,8 @@ def resolve_business_identity(business, owner_profile=None, order=None, represen
 
 def business_identity_message(business, order=None):
     order_type = getattr(order, "business_order_type", "") if order else ""
-    if business.profile_type == "ORGANIZATION" or order_type == "MULTIPLE":
-        return "Representative details will appear after a person is assigned to this card."
     if not business.show_owner_identity:
-        return "To show your identity on Business Single cards, enable owner identity in Business Profile settings."
+        return "Personal or representative information is hidden by your profile visibility setting."
+    if business.profile_type == "ORGANIZATION" or order_type == "MULTIPLE":
+        return "Assign a representative to this card to include their details in the preview."
     return "Add your full name to your Personal Profile to complete this business card."

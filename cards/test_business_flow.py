@@ -1,6 +1,7 @@
 from decimal import Decimal
 from unittest.mock import patch
 
+import qrcode
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -88,6 +89,8 @@ class BusinessCardFlowTests(TestCase):
         self.assertEqual(NFCCard.objects.count(), 2)
 
     def test_shared_business_and_distinct_representatives_and_individual_activation(self):
+        self.business.show_owner_identity = True
+        self.business.save()
         order = self._order(self.product, "MULTIPLE", 2)
         allocations = list(order.allocations.all())
         self.client.post(reverse("representative_edit", args=[allocations[0].id]), {"name": "Rahim", "designation": "Manager", "phone": "01711111111", "email": ""})
@@ -220,6 +223,8 @@ class BusinessCardFlowTests(TestCase):
         self.assertEqual(build_card_print_images(card)[0].size, CR80_SIZE)
 
     def test_business_print_qr_matches_each_representative(self):
+        self.business.show_owner_identity = True
+        self.business.save()
         order = self._order(self.product, "MULTIPLE", 2)
         allocations = list(order.allocations.all())
         expected = ["Rahim", "Karim"]
@@ -333,7 +338,7 @@ class BusinessCardFlowTests(TestCase):
         self.assertNotIn("card_width_mm", form.base_fields)
         self.assertNotIn("card_height_mm", form.base_fields)
 
-    def test_historical_order_keeps_online_qr_print_design(self):
+    def test_historical_order_reprints_offline_vcard_qr_regardless_of_order_flag(self):
         order = Order.objects.create(
             user=self.owner, product=self.personal, quantity=1, price=self.personal.price,
             customer_name="Buyer", phone="01700000000", address="Road 1", city="Dhaka",
@@ -342,7 +347,99 @@ class BusinessCardFlowTests(TestCase):
         CardAllocation.objects.create(order=order, position=1, card=card)
         with patch("seller_api.print_design.qrcode.make", wraps=__import__("qrcode").make) as make_qr:
             build_card_print_images(card)
-        make_qr.assert_called_once_with(card.public_url)
+        payload = make_qr.call_args.args[0]
+        self.assertIn("BEGIN:VCARD", payload)
+        self.assertIn(card.public_url, payload)
+        self.assertEqual(make_qr.call_args.kwargs["error_correction"], __import__("qrcode").constants.ERROR_CORRECT_M)
+
+    def test_print_snapshot_uses_allocation_representative_for_legacy_order(self):
+        self.business.show_owner_identity = True
+        self.business.save()
+        order = self._order(self.product, "SINGLE", 1)
+        order.business_order_type = "MULTIPLE"
+        order.save(update_fields=["business_order_type"])
+        order.offline_contact_print = False
+        order.save(update_fields=["offline_contact_print"])
+        allocation = order.allocations.get()
+        rep = BusinessRepresentative.objects.create(
+            business=self.business, name="Print Representative", phone="01777777777", phone_public=True,
+        )
+        allocation.representative = rep
+        allocation.save(update_fields=["representative"])
+        self._prepare(order, allocation)
+        allocation.refresh_from_db()
+        card = allocation.card
+        # The legacy order flag remains false: allocation identity still drives this reprint.
+        order.refresh_from_db()
+        self.assertFalse(order.offline_contact_print)
+
+        with patch("seller_api.print_design.qrcode.make", wraps=__import__("qrcode").make) as make_qr:
+            build_card_print_images(card)
+
+        payload = make_qr.call_args.args[0]
+        self.assertIn("FN:Print Representative", payload)
+        self.assertIn("01777777777", payload)
+        self.assertIn(card.public_url, payload)
+
+    def test_offline_qr_module_size_is_suitable_for_cr80_prints(self):
+        self.owner.profile.full_name = "Representative Person"
+        self.owner.profile.phone = "+8801700111222"
+        self.owner.profile.email = "person@example.test"
+        self.owner.profile.bio = "Designer and owner " * 10
+        self.owner.profile.save()
+        cards = []
+        personal_order = self._order(self.personal)
+        personal_allocation = personal_order.allocations.get()
+        self._prepare(personal_order, personal_allocation)
+        personal_allocation.refresh_from_db()
+        cards.append(personal_allocation.card)
+
+        card_scenarios = (
+            ("SMALL_BUSINESS", "COMPANY"),
+            ("ORGANIZATION", "COMPANY"),
+            ("ORGANIZATION", "EDUCATIONAL_INSTITUTE"),
+        )
+        for profile_type, organization_category in card_scenarios:
+            self.business.profile_type = profile_type
+            self.business.organization_category = organization_category
+            self.business.phone = "+88025551234"
+            self.business.email = "office@example.test"
+            self.business.address = "Official Road, Dhaka"
+            self.business.save()
+            order = self._order(self.product, "SINGLE", 1)
+            allocation = order.allocations.get()
+            if profile_type == "ORGANIZATION":
+                order.business_order_type = "MULTIPLE"
+                order.save(update_fields=["business_order_type"])
+                representative = BusinessRepresentative.objects.create(
+                    business=self.business,
+                    name=f"{organization_category} Representative",
+                    designation="Director",
+                    phone="+8801700111222",
+                    email="representative@example.test",
+                    phone_public=True,
+                    email_public=True,
+                )
+                allocation.representative = representative
+                allocation.save(update_fields=["representative"])
+            self._prepare(order, allocation)
+            allocation.refresh_from_db()
+            cards.append(allocation.card)
+
+        for card in cards:
+            with self.subTest(card=card.card_uid):
+                with patch("seller_api.print_design.qrcode.make", wraps=qrcode.make) as make_qr:
+                    front, back = build_card_print_images(card)
+                payload = make_qr.call_args.args[0]
+                qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M)
+                qr.add_data(payload)
+                qr.make(fit=True)
+                qr_width_mm = 430 / 300 * 25.4
+                module_width_mm = qr_width_mm / (qr.modules_count + 8)
+                self.assertGreaterEqual(module_width_mm, 0.35)
+                self.assertEqual(front.size, CR80_SIZE)
+                self.assertEqual(back.size, CR80_SIZE)
+                self.assertIn(card.public_url, payload)
 
     def test_business_dashboard_keeps_card_statistics_separate(self):
         order = self._order(self.product, "MULTIPLE", 2)

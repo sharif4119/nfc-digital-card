@@ -44,11 +44,11 @@ The server generates `card_uid`, `public_token`, `public_url` and `print_pdf_url
 ## Printing, programming and activation
 
 - `GET /api/seller/cards/<card_id>/` returns card detail with category, representative and print URL when printable.
-- `GET /api/seller/cards/<card_id>/print/` returns `application/pdf`, two pages (front and back), with `Content-Disposition: attachment; filename="NexTap-<card_uid>-front-back.pdf"`. Staff token required. It works for `ASSIGNED`, `PROGRAMMED` and `ACTIVE` and does not change status. New orders print a labelled offline vCard QR containing the exact canonical public profile URL. Historical orders keep the original online URL QR artwork.
+- `GET /api/seller/cards/<card_id>/print/` returns `application/pdf`, two pages (front and back), with `Content-Disposition: attachment; filename="NexTap-<card_uid>-front-back.pdf"`. Staff token required. It works for `ASSIGNED`, `PROGRAMMED` and `ACTIVE` and does not change status. Every card PDF now prints a vCard QR containing only public/authorized contact details and that card's exact canonical profile URL, including for historical orders. The print is a snapshot: reprint after contact information changes.
 - `POST /api/seller/cards/<card_id>/programmed/` changes one `ASSIGNED` card to `PROGRAMMED`.
 - `POST /api/seller/cards/<card_id>/activate/` changes one `PROGRAMMED` card to `ACTIVE`.
 
-These transitions happen per card. Only `ACTIVE` cards expose `/c/<public_token>/`. Printing can happen before or after programming; it is optional. Printed offline contact content is a snapshot and must be reprinted if business or representative details change. The online profile uses live database values.
+These transitions happen per card. Only `ACTIVE` cards expose `/c/<public_token>/`. Printing can happen before or after programming; it is optional. Printed instructions distinguish `Tap NFC - Open Online Profile` from `Scan QR - Save Contact Offline`. The NFC chip stores the existing single URL record; the offline QR is printed artwork and is not written to the chip. Printed offline contact content is a snapshot and must be reprinted if business or representative details change. The online profile uses live database values and requires internet access.
 
 ## Deployment and stock configuration
 

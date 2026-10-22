@@ -372,7 +372,14 @@ class CardPrintPDFAPITests(APITestCase):
                 f"/c/{self.card.public_token}/"
             ),
         )
-        make_qr.assert_called_once_with(self.card.public_url)
+        self.assertEqual(make_qr.call_count, 1)
+        payload = make_qr.call_args.args[0]
+        self.assertIn("BEGIN:VCARD", payload)
+        self.assertIn(self.card.public_url, payload)
+        self.assertEqual(
+            make_qr.call_args.kwargs["error_correction"],
+            qrcode.constants.ERROR_CORRECT_M,
+        )
 
     def test_printing_supports_lifecycle_status_without_mutation(self):
         self.client.force_authenticate(user=self.staff)

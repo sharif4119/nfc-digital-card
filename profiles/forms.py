@@ -231,7 +231,10 @@ class BusinessProfileForm(forms.ModelForm):
                      "share_owner_social"):
             self.fields[name].widget.attrs["class"] = "form-check-input"
         self.fields["banner"].help_text = "Optional organization cover image · up to 5 MB"
-        self.fields["show_owner_identity"].label = "Show my personal identity on Business Single cards"
+        self.fields["show_owner_identity"].label = "Show Personal/Representative Information"
+        self.fields["show_owner_identity"].help_text = (
+            "Display the owner or assigned representative above your business or organization details."
+        )
         self.fields["share_owner_phone"].label = "Share my personal phone"
         self.fields["share_owner_email"].label = "Share my personal email"
         self.fields["share_owner_whatsapp"].label = "Share my personal WhatsApp"
