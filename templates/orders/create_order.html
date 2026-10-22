@@ -7,6 +7,7 @@
     <div class="container">
         <div class="page-heading">
             <div><div class="eyebrow">Complete your order</div><h1>Order {{ product.name }}</h1><p>{% if product.card_category == "BUSINESS" %}Choose one business card or a set of cards for representatives.{% else %}Confirm your contact and delivery details for one personal NexTap card.{% endif %}</p></div>
+            <a href="{% url 'product_detail' product.id %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Product Details</a>
         </div>
         <div class="row g-4 align-items-start">
             <div class="col-lg-7">
@@ -18,7 +19,7 @@
                         </div>
                         <form method="post">
                             {% csrf_token %}
-                            {% if product.card_category == "BUSINESS" %}<div class="notice-box notice-info mb-3">{% if business_profile %}Sharing {{ business_profile.name }} across all cards. You can assign a different representative to each card after ordering.{% else %}Create your business profile before placing this order. <a href="{% url 'business_edit' %}">Create business profile</a>{% endif %}</div>{% endif %}
+                            {% if product.card_category == "BUSINESS" %}<div class="notice-box notice-info mb-3">{% if business_profile %}Sharing your {{ business_profile.get_profile_type_display|lower }} profile ({{ business_profile.name }}) across all cards. You can assign a different representative to each card after ordering.{% else %}Create your business profile before placing this order. <a href="{% url 'business_edit' %}">Create Business Profile</a>{% endif %}</div>{% endif %}
                             {{ form.as_p }}
                             <button type="submit" class="btn btn-primary w-100 mt-3">Place Order <i class="bi bi-arrow-right"></i></button>
                         </form>

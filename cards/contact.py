@@ -1,5 +1,7 @@
 """vCard 3.0 used by downloads, offline QR and print artwork."""
 
+from .presentation import resolve_business_identity
+
 
 def escape(value):
     return (str(value or "").replace("\\", "\\\\").replace("\r\n", "\n")
@@ -25,26 +27,47 @@ def build_vcard(card, *, offline=False):
     representative = card.representative
     lines = ["BEGIN:VCARD", "VERSION:3.0"]
     if business:
-        contact_name = representative.name if representative else business.name
+        allocation = getattr(card, "allocation", None)
+        order = allocation.order if allocation else getattr(card, "assigned_order", None)
+        representative = (allocation.representative if allocation and allocation.representative_id
+                          else representative)
+        identity = resolve_business_identity(
+            business, getattr(card.owner, "profile", None), order, representative
+        )
+        contact_name = identity["name"] if identity else business.name
         lines.append("N:;" + escape(contact_name) + ";;;")
         lines.append("FN:" + escape(contact_name))
         lines.append("ORG:" + escape(business.name))
-        if representative and representative.designation:
-            lines.append("TITLE:" + escape(representative.designation))
-        if representative and representative.phone:
-            lines.append("TEL;TYPE=WORK:" + escape(representative.phone))
-        if representative and representative.email:
-            lines.append("EMAIL;TYPE=WORK:" + escape(representative.email))
+        if identity and identity["designation"]:
+            lines.append("TITLE:" + escape(identity["designation"]))
+        if identity and identity["bio"]:
+            lines.append("NOTE:" + escape(identity["bio"][:120] if offline else identity["bio"]))
+        if identity and identity["phone"]:
+            lines.append("TEL;TYPE=WORK:" + escape(identity["phone"]))
+        if identity and identity["email"]:
+            lines.append("EMAIL;TYPE=WORK:" + escape(identity["email"]))
+        if identity and identity["whatsapp"]:
+            lines.append("TEL;TYPE=CELL:" + escape(identity["whatsapp"]))
+        if business.whatsapp:
+            lines.append("TEL;TYPE=WORK:" + escape(business.whatsapp))
         if business.phone:
             lines.append("TEL;TYPE=WORK:" + escape(business.phone))
         if business.email:
             lines.append("EMAIL;TYPE=WORK:" + escape(business.email))
         if business.website:
             lines.append("URL:" + escape(business.website))
+        if identity and identity["website"] and identity["website"] != business.website:
+            lines.append("URL;TYPE=HOME:" + escape(identity["website"]))
+        if identity:
+            for social_name in ("facebook", "instagram", "linkedin", "github"):
+                if identity[social_name]:
+                    lines.append("X-SOCIALPROFILE;TYPE=" + social_name.upper() + ":" + escape(identity[social_name]))
         if business.description:
             lines.append("NOTE:" + escape(business.description[:120] if offline else business.description))
         if business.address and not offline:
             lines.append("ADR;TYPE=WORK:;;" + escape(business.address) + ";;;;")
+        if identity and identity["address"]:
+            lines.append("ADR;TYPE=HOME:;;" + escape(identity["address"]) + ";;;;")
     else:
         profile = card.owner.profile
         lines.append("N:;" + escape(profile.public_name) + ";;;")

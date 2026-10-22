@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import qrcode
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -11,11 +12,18 @@ from django.utils import timezone
 from .contact import build_vcard
 from .forms import CardInquiryForm
 from .models import CardInquiry, CardVisit, NFCCard
+from .presentation import business_identity_message, resolve_business_identity
+from profiles.forms import normalize_web_url
+from profiles.models import FeaturedOffering
+from profiles.presentation import add_safe_offering_links
 
 
 def _visible_card(token):
     card = get_object_or_404(
-        NFCCard.objects.select_related("owner__profile", "business_profile", "representative"),
+        NFCCard.objects.select_related(
+            "owner__profile", "business_profile", "representative",
+            "allocation__order", "allocation__representative", "assigned_order",
+        ),
         public_token=token, status="ACTIVE",
     )
     if not card.owner or (not card.business_profile and not hasattr(card.owner, "profile")):
@@ -48,9 +56,53 @@ def public_card_view(request, token):
                 return redirect(f"{request.path}?sent=1")
     if request.method == "GET":
         CardVisit.objects.create(card=card, visitor_hash=_visitor_hash(request))
+    business = card.business_profile
+    identity = None
+    identity_message = ""
+    website_url = ""
+    logo_url = ""
+    banner_url = ""
+    social_links = {}
+    featured_offerings = FeaturedOffering.objects.none()
+    if business:
+        allocation = getattr(card, "allocation", None)
+        order = allocation.order if allocation else getattr(card, "assigned_order", None)
+        representative = (allocation.representative if allocation and allocation.representative_id
+                          else card.representative)
+        identity = resolve_business_identity(business, getattr(card.owner, "profile", None), order, representative)
+        identity_message = business_identity_message(business, order) if identity is None else ""
+        for field, value in (("website", business.website), ("facebook", business.facebook),
+                             ("instagram", business.instagram), ("linkedin", business.linkedin)):
+            try:
+                normalized = normalize_web_url(value)
+            except (ValidationError, ValueError):
+                normalized = ""
+            if normalized:
+                if field == "website":
+                    website_url = normalized
+                else:
+                    social_links[field] = normalized
+        if business.logo:
+            try:
+                if business.logo.storage.exists(business.logo.name):
+                    logo_url = business.logo.url
+            except (OSError, ValueError):
+                pass
+        if business.profile_type == "ORGANIZATION" and business.banner:
+            try:
+                if business.banner.storage.exists(business.banner.name):
+                    banner_url = business.banner.url
+            except (OSError, ValueError):
+                pass
+        featured_offerings = FeaturedOffering.objects.filter(business=business).order_by("position", "id")
+        featured_offerings = add_safe_offering_links(featured_offerings)
     return render(request, "cards/public_card.html", {
         "card": card, "profile": getattr(card.owner, "profile", None),
-        "business": card.business_profile, "representative": card.representative,
+        "business": business, "representative": card.representative,
+        "business_identity": identity, "identity_message": identity_message,
+        "website_url": website_url, "business_logo_url": logo_url,
+        "business_banner_url": banner_url, "business_social_links": social_links,
+        "featured_offerings": featured_offerings,
         "inquiry_form": form, "inquiry_sent": request.GET.get("sent") == "1",
     })
 

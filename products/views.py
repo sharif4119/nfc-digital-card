@@ -6,13 +6,14 @@ from .models import Product
 def product_list(request):
     products = Product.objects.filter(
         is_available=True,
-    )
+    ).order_by("id")
 
     return render(
         request,
         "products/product_list.html",
         {
-            "products": products,
+            "personal_products": products.filter(card_category="PERSONAL"),
+            "business_products": products.filter(card_category="BUSINESS"),
         },
     )
 

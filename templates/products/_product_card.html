@@ -1,0 +1,32 @@
+<article class="product-grid-card">
+    <div class="product-media">
+        <div class="product-image-wrap">
+            {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="product-image"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="product-placeholder-card" style="display:none;">
+                    <div class="brand-lockup"><span class="brand-mark">N</span><span>NexTap</span></div>
+                    <span>Tap once. Share everything.</span>
+                </div>
+            {% else %}
+                <div class="product-placeholder-card">
+                    <div class="brand-lockup"><span class="brand-mark">N</span><span>NexTap</span></div>
+                    <span>Tap once. Share everything.</span>
+                </div>
+            {% endif %}
+        </div>
+        <span class="availability-badge"><span class="availability-dot"></span>Available</span>
+    </div>
+    <div class="product-card-content">
+        <div class="card-kicker">{{ product.get_card_category_display }}</div>
+        <h2>{{ product.name }}</h2>
+        <p>{{ product.description|default:"A premium NFC card linked to your live NexTap profile."|truncatewords:22 }}</p>
+        <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+            <div class="product-price">৳{{ product.price }} <small>per card</small></div>
+        </div>
+        <div class="d-grid gap-2">
+            <a href="{% url 'product_detail' product.id %}" class="btn btn-primary">View Details <i class="bi bi-arrow-right"></i></a>
+            <a href="{% url 'create_order' product.id %}" class="btn btn-outline-primary">Order Card</a>
+        </div>
+    </div>
+</article>
