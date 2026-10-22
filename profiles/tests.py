@@ -8,6 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from cards.models import NFCCard
 from orders.models import CardAllocation, Order
 from products.models import Product
 from profiles.forms import FeaturedOfferingForm
@@ -47,6 +48,133 @@ class PersonalProfileFlowTests(TestCase):
         self.assertTemplateUsed(response, "profiles/profile_preview.html")
         self.assertContains(response, "Preview Name")
         self.assertContains(response, "Only you can see this page")
+
+    def test_personal_preview_uses_new_card_design_without_a_cover_banner(self):
+        profile = Profile.objects.get(user=self.user)
+        profile.full_name = "Card Owner"
+        profile.job_title = "Designer"
+        profile.company = "Studio North"
+        profile.bio = "A thoughtful professional introduction."
+        profile.phone = "+880 1700 000000"
+        profile.email = "owner@example.com"
+        profile.whatsapp = "01700000000"
+        profile.address = "Dhaka, Bangladesh"
+        profile.website = "https://example.com"
+        profile.facebook = "https://facebook.com/cardowner"
+        profile.github = "https://github.com/cardowner"
+        profile.save()
+
+        response = self.client.get(reverse("profile_preview"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="personal-digital-profile"')
+        self.assertContains(response, 'class="personal-profile-photo-wrap"')
+        self.assertContains(response, "Card Owner")
+        self.assertContains(response, "Designer")
+        self.assertContains(response, "Studio North")
+        self.assertContains(response, "A thoughtful professional introduction.")
+        self.assertContains(response, 'href="tel:+8801700000000"')
+        self.assertContains(response, 'href="mailto:owner@example.com"')
+        self.assertContains(response, 'href="https://wa.me/8801700000000"')
+        self.assertContains(response, "Dhaka, Bangladesh")
+        self.assertContains(response, 'aria-label="Facebook"')
+        self.assertContains(response, 'aria-label="GitHub"')
+        self.assertContains(response, "NexTap digital profile")
+        self.assertNotContains(response, "profile-cover")
+        self.assertNotContains(response, "Verified")
+
+    def test_personal_preview_omits_empty_fields_and_uses_initial_placeholder(self):
+        response = self.client.get(reverse("profile_preview"))
+        self.assertContains(response, "personal-profile-placeholder")
+        self.assertNotContains(response, "personal-profile-role")
+        self.assertNotContains(response, "personal-profile-bio")
+        self.assertNotContains(response, "personal-contact-label")
+        self.assertNotContains(response, "personal-social-link")
+
+    def test_personal_preview_uses_existing_profile_photo_only_when_file_exists(self):
+        image_buffer = BytesIO()
+        Image.new("RGB", (3, 3), "blue").save(image_buffer, format="PNG")
+        upload = SimpleUploadedFile("portrait.png", image_buffer.getvalue(), content_type="image/png")
+        temp_root = Path(__file__).resolve().parents[1] / "tmp"
+        with TemporaryDirectory(dir=temp_root, ignore_cleanup_errors=True) as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                profile = Profile.objects.get(user=self.user)
+                profile.profile_picture.save("portrait.png", upload, save=True)
+                response = self.client.get(reverse("profile_preview"))
+                self.assertContains(response, 'class="personal-profile-photo"')
+                self.assertContains(response, "/media/profiles/portrait.png")
+                profile.profile_picture.delete(save=False)
+                profile.profile_picture = "profiles/missing.png"
+                profile.save(update_fields=["profile_picture"])
+                response = self.client.get(reverse("profile_preview"))
+                self.assertContains(response, "personal-profile-placeholder")
+                self.assertNotContains(response, "missing.png")
+
+    def test_private_save_contact_download_is_owner_only_and_includes_card_url_when_available(self):
+        profile = Profile.objects.get(user=self.user)
+        profile.full_name = "Card Owner"
+        profile.job_title = "Designer"
+        profile.phone = "+8801700000000"
+        profile.whatsapp = "8801700000000"
+        profile.email = "owner@example.com"
+        profile.address = "Dhaka"
+        profile.save()
+        url = reverse("download_profile_vcard")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/vcard; charset=utf-8")
+        self.assertIn("attachment; filename=\"Card_Owner.vcf\"", response["Content-Disposition"])
+        body = response.content.decode()
+        self.assertIn("FN:Card Owner", body)
+        self.assertIn("TEL:+8801700000000", body)
+        self.assertIn("TEL;TYPE=CELL:8801700000000", body)
+        self.assertIn("EMAIL:owner@example.com", body)
+        self.assertIn("ADR:;;Dhaka;;;;", body)
+        self.assertNotIn("/c/", body)
+
+        card = NFCCard.objects.create(card_uid="PREVIEW-CONTACT-01", owner=self.user, status="ASSIGNED")
+        response = self.client.get(url)
+        self.assertIn(card.public_url, response.content.decode())
+
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 302)
+        other = User.objects.create_user(username="other-contact-owner", password="customer-pass")
+        self.client.force_login(other)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Card Owner", response.content.decode())
+
+    def test_public_profile_uses_the_shared_personal_design_and_existing_vcard_endpoint(self):
+        profile = Profile.objects.get(user=self.user)
+        profile.full_name = "Public Card Owner"
+        profile.phone = "01700000000"
+        profile.facebook = "https://facebook.com/public-owner"
+        profile.save()
+        card = NFCCard.objects.create(card_uid="PERSONAL-DESIGN-01", owner=self.user, status="ACTIVE")
+
+        response = self.client.get(reverse("public_card", args=[card.public_token]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="personal-digital-profile"')
+        self.assertContains(response, "Public Card Owner")
+        self.assertContains(response, reverse("download_vcard", args=[card.public_token]))
+        self.assertContains(response, reverse("card_qr", args=[card.public_token]))
+        self.assertContains(response, "NexTap digital profile")
+        self.assertNotContains(response, "Private preview")
+        self.assertNotContains(response, "Edit Profile")
+        self.assertNotContains(response, "profile-cover")
+
+    def test_personal_preview_uses_safe_social_and_website_urls(self):
+        profile = Profile.objects.get(user=self.user)
+        profile.website = "javascript:alert(1)"
+        profile.facebook = "javascript:alert(2)"
+        profile.instagram = "https://instagram.com/safe"
+        profile.whatsapp = "call me 01700000000"
+        profile.save()
+        response = self.client.get(reverse("profile_preview"))
+        self.assertNotContains(response, 'href="javascript:')
+        self.assertNotContains(response, "wa.me/88017000000")
+        self.assertContains(response, 'href="https://instagram.com/safe"')
 
     def test_personal_profile_edit_and_preview_have_parent_navigation(self):
         edit_response = self.client.get(reverse("edit_profile"))

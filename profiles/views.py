@@ -1,15 +1,17 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import ProfileForm, add_field_error_styles, normalize_web_url
 from .models import Profile
 from .models import BusinessProfile, FeaturedOffering
 from .forms import BusinessProfileForm, FeaturedOfferingFormSet, RepresentativeForm
-from .presentation import add_safe_offering_links
+from .presentation import add_safe_offering_links, personal_profile_presentation
 from orders.models import CardAllocation
-from cards.models import CardInquiry, CardVisit
+from cards.models import CardInquiry, CardVisit, NFCCard
+from cards.contact import build_profile_vcard
 from cards.presentation import business_identity_message, resolve_business_identity
 from django.db import transaction
 from django.db.models import Count
@@ -53,11 +55,32 @@ def edit_profile(request):
 @login_required
 def profile_preview(request):
     profile, _ = Profile.objects.get_or_create(user=request.user)
+    presentation = personal_profile_presentation(profile)
     return render(
         request,
         "profiles/profile_preview.html",
-        {"profile": profile},
+        {"profile": profile, **presentation},
     )
+
+
+@login_required
+def download_profile_vcard(request):
+    """Download the signed-in user's personal contact without exposing it publicly."""
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    card = NFCCard.objects.filter(
+        owner=request.user, business_profile__isnull=True,
+    ).order_by("-created_at", "-pk").first()
+    profile_url = card.public_url if card else ""
+    response = HttpResponse(
+        build_profile_vcard(profile, profile_url=profile_url),
+        content_type="text/vcard; charset=utf-8",
+    )
+    safe_name = "".join(
+        character for character in profile.public_name
+        if character.isalnum() or character in " -_"
+    ).strip().replace(" ", "_")[:60] or "NexTap_Contact"
+    response["Content-Disposition"] = f'attachment; filename="{safe_name}.vcf"'
+    return response
 
 
 @login_required

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import edit_profile, profile_preview, business_edit, business_cards, business_profile_preview, representative_edit
+from .views import edit_profile, profile_preview, download_profile_vcard, business_edit, business_cards, business_profile_preview, representative_edit
 
 
 urlpatterns = [
@@ -13,6 +13,7 @@ urlpatterns = [
         edit_profile,
         name="edit_profile",
     ),
+    path("contact/", download_profile_vcard, name="download_profile_vcard"),
 
     path(
         "preview/",

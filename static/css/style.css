@@ -362,6 +362,50 @@ a:hover { color: #004fcf; }
 .preview-page { background: var(--surface); }
 .preview-page .digital-profile-card { box-shadow: var(--shadow-lg); }
 
+/* Personal profiles use the approved light, centered card; business profiles keep their separate presentation. */
+.personal-preview-page, .personal-public-profile-page { color: #0b1933; background: #f5f8fc; }
+.personal-preview-shell { padding-bottom: 3.5rem; }
+.personal-preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; margin-bottom: 1.5rem; }
+.personal-preview-heading h1 { margin: .15rem 0 .35rem; color: #0b1933; font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -.04em; }
+.personal-preview-heading p { margin: 0; color: #69788c; }
+.personal-preview-actions { display: flex; flex-wrap: wrap; gap: .55rem; }
+.personal-public-profile-page .public-brandbar { padding: 1.2rem 0 .2rem; }
+.personal-public-profile-page .public-brandbar .brand-lockup { color: #0b1933; }
+.personal-digital-profile { width: 100%; max-width: 660px; margin: 0 auto; overflow: hidden; color: #0b1933; background: #fff; border: 1px solid #e6edf5; border-radius: 26px; box-shadow: 0 18px 55px rgba(21, 43, 74, .11); }
+.personal-profile-card-content { padding: 2rem clamp(1.1rem, 5vw, 2.35rem) 2rem; }
+.personal-profile-photo-wrap { display: flex; justify-content: center; }
+.personal-profile-photo, .personal-profile-placeholder { display: grid; width: clamp(128px, 35vw, 150px); height: clamp(128px, 35vw, 150px); place-items: center; overflow: hidden; color: #fff; background: #eaf3ff; border: 5px solid #fff; border-radius: 50%; box-shadow: 0 8px 24px rgba(17, 45, 82, .16); }
+.personal-profile-photo { object-fit: cover; }
+.personal-profile-placeholder { color: #1677ff; background: #edf5ff; font-size: 3rem; font-weight: 800; }
+.personal-profile-identity { margin: 1.1rem auto 0; text-align: center; }
+.personal-profile-identity h1 { margin: 0; color: #0b1933; font-size: clamp(1.65rem, 6vw, 2.25rem); font-weight: 850; line-height: 1.16; letter-spacing: -.045em; overflow-wrap: anywhere; }
+.personal-profile-role { margin: .42rem 0 0; color: #64748b; font-size: 1rem; }
+.personal-profile-company { margin: .2rem 0 0; color: #52657b; font-size: .95rem; font-weight: 650; }
+.personal-profile-accent { display: block; width: 48px; height: 3px; margin: .95rem auto; background: #1677ff; border-radius: 3px; }
+.personal-profile-bio { max-width: 480px; margin: 0 auto; color: #59687b; font-size: .96rem; line-height: 1.7; overflow-wrap: anywhere; }
+.personal-contact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: 1.55rem; }
+.personal-contact-tile { display: flex; align-items: center; gap: .7rem; min-width: 0; min-height: 78px; padding: .75rem; color: #263c58; background: #f7f9fc; border: 1px solid #e8eef5; border-radius: 15px; text-decoration: none; }
+.personal-contact-tile:hover { color: #125fc9; border-color: #bfd8fa; background: #f3f8ff; }
+.personal-contact-icon { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; color: #1677ff; background: #e8f2ff; border-radius: 12px; }
+.personal-contact-icon.is-whatsapp { color: #168b4a; background: #e7f7ed; }
+.personal-contact-copy { display: grid; min-width: 0; gap: .12rem; }
+.personal-contact-label { color: #7a8798; font-size: .7rem; font-weight: 750; letter-spacing: .045em; text-transform: uppercase; }
+.personal-contact-value { color: inherit; font-size: .84rem; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; word-break: break-word; }
+.personal-social-row { display: flex; flex-wrap: wrap; justify-content: center; gap: .65rem; margin-top: 1.5rem; }
+.personal-social-link { display: grid; width: 42px; height: 42px; place-items: center; color: #455b75; background: #fff; border: 1px solid #e3eaf2; border-radius: 50%; box-shadow: 0 3px 10px rgba(24, 48, 78, .06); text-decoration: none; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+.personal-social-link:hover { color: #fff; background: #1677ff; border-color: #1677ff; }
+.personal-social-link.is-facebook { color: #1877f2; }
+.personal-social-link.is-instagram { color: #c13584; }
+.personal-social-link.is-linkedin { color: #0a66c2; }
+.personal-social-link.is-github { color: #24292f; }
+.personal-social-link:focus-visible, .personal-contact-tile:focus-visible { outline: 3px solid #1677ff; outline-offset: 3px; }
+.personal-profile-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .65rem; margin: 1.45rem 0 .1rem; }
+.personal-save-contact { display: inline-flex; min-width: 220px; min-height: 48px; align-items: center; justify-content: center; gap: .55rem; padding: .7rem 1.4rem; border-radius: 999px; font-weight: 750; box-shadow: 0 7px 18px rgba(22, 119, 255, .2); }
+.personal-qr-button { min-height: 44px; border-radius: 999px; }
+.personal-profile-footer { display: grid; gap: .2rem; padding: 1rem 1.25rem 1.15rem; color: #8794a5; border-top: 1px solid #edf1f5; text-align: center; font-size: .75rem; }
+.personal-profile-footer span { color: #9aa5b3; font-size: .7rem; }
+.personal-profile-card-content .profile-qr-panel { color: #263c58; }
+
 .result-shell { max-width: 620px; margin: 0 auto; padding: 3rem; text-align: center; }
 .result-icon { display: grid; width: 76px; height: 76px; margin: 0 auto 1.3rem; place-items: center; border-radius: 24px; font-size: 2rem; }
 .result-success .result-icon { color: var(--success); background: #e5f8f0; }
@@ -410,6 +454,17 @@ a:hover { color: #004fcf; }
     .detail-item-wide { grid-column: auto; }
     .digital-profile-card { border-radius: 24px; }
     .profile-content { padding-right: 1.15rem; padding-left: 1.15rem; }
+}
+@media (max-width: 575.98px) {
+    .personal-preview-heading { align-items: flex-start; flex-direction: column; }
+    .personal-profile-card-content { padding: 1.5rem 1rem 1.45rem; }
+    .personal-profile-actions { align-items: stretch; flex-direction: column; }
+    .personal-save-contact, .personal-qr-button { width: 100%; }
+}
+@media (max-width: 359.98px) {
+    .personal-contact-grid { grid-template-columns: minmax(0, 1fr); }
+    .personal-preview-actions { width: 100%; }
+    .personal-preview-actions .btn { flex: 1 1 100%; }
 }
 
 .whatsapp-float {

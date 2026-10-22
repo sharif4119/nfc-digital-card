@@ -15,7 +15,7 @@ from .models import CardInquiry, CardVisit, NFCCard
 from .presentation import business_identity_message, resolve_business_identity
 from profiles.forms import normalize_web_url
 from profiles.models import FeaturedOffering
-from profiles.presentation import add_safe_offering_links
+from profiles.presentation import add_safe_offering_links, personal_profile_presentation
 
 
 def _visible_card(token):
@@ -96,6 +96,8 @@ def public_card_view(request, token):
                 pass
         featured_offerings = FeaturedOffering.objects.filter(business=business).order_by("position", "id")
         featured_offerings = add_safe_offering_links(featured_offerings)
+    profile = getattr(card.owner, "profile", None)
+    personal_presentation = personal_profile_presentation(profile) if profile and not business else {}
     return render(request, "cards/public_card.html", {
         "card": card, "profile": getattr(card.owner, "profile", None),
         "business": business, "representative": card.representative,
@@ -104,6 +106,7 @@ def public_card_view(request, token):
         "business_banner_url": banner_url, "business_social_links": social_links,
         "featured_offerings": featured_offerings,
         "inquiry_form": form, "inquiry_sent": request.GET.get("sent") == "1",
+        **personal_presentation,
     })
 
 
