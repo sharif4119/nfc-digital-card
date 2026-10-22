@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}{% if business %}{{ business.name }}{% else %}{{ profile.public_name }}{% endif %}{% endblock %}
-{% block body_class %}public-profile-page{% endblock %}
+{% block body_class %}{% if business %}public-profile-page{% else %}public-profile-page personal-public-profile-page{% endif %}{% endblock %}
 
 {% block site_header %}
 <div class="public-brandbar">
@@ -14,9 +14,9 @@
 {% block content %}
 <section class="public-profile-shell">
     <div class="container px-3">
-        <article class="digital-profile-card">
-            <div class="profile-cover"></div>
+        <article class="{% if business %}digital-profile-card{% else %}personal-digital-profile{% endif %}">
             {% if business %}
+            <div class="profile-cover"></div>
             <div class="profile-content">
                 {% include "profiles/_combined_business_profile.html" with public_card=True preview=False %}
                 <section class="mt-5" aria-labelledby="inquiry-title"><h2 id="inquiry-title" class="h5 fw-bold">Ask this business a question</h2>
@@ -26,60 +26,9 @@
                 </section>
             </div>
             {% else %}
-            <div class="profile-content">
-                {% if profile.profile_picture %}
-                    <img src="{{ profile.profile_picture.url }}" alt="{{ profile.public_name }}" class="public-profile-photo">
-                {% else %}
-                    <div class="public-profile-placeholder">{{ profile.public_name|first|upper }}</div>
-                {% endif %}
-
-                <div class="profile-identity">
-                    <h1>{{ profile.public_name }}</h1>
-                    {% if profile.job_title or profile.company %}
-                        <p class="profile-role">
-                            {% if profile.job_title %}{{ profile.job_title }}{% endif %}
-                            {% if profile.job_title and profile.company %}<span class="mx-1">·</span>{% endif %}
-                            {% if profile.company %}<span class="profile-company">{{ profile.company }}</span>{% endif %}
-                        </p>
-                    {% endif %}
-                    {% if profile.bio %}<p class="profile-bio">{{ profile.bio|linebreaksbr }}</p>{% endif %}
-                </div>
-
-                <div class="profile-primary-actions">
-                    <a href="{% url 'download_vcard' card.public_token %}" class="btn btn-primary"><i class="bi bi-person-plus-fill"></i>Save Contact</a>
-                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#profileQr" aria-expanded="false" aria-controls="profileQr"><i class="bi bi-qr-code"></i>Show QR</button>
-                </div>
-
-                <div class="contact-action-grid">
-                    {% if profile.phone %}<a href="tel:{{ profile.phone }}" class="contact-action"><i class="bi bi-telephone"></i><span>{{ profile.phone }}</span></a>{% endif %}
-                    {% if profile.email %}<a href="mailto:{{ profile.email }}" class="contact-action"><i class="bi bi-envelope"></i><span>{{ profile.email }}</span></a>{% endif %}
-                    {% if profile.website %}<a href="{{ profile.website }}" class="contact-action" target="_blank" rel="noopener"><i class="bi bi-globe2"></i><span>Visit website</span></a>{% endif %}
-                    {% if profile.whatsapp %}<a href="https://wa.me/{{ profile.whatsapp }}" class="contact-action" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i><span>WhatsApp</span></a>{% endif %}
-                </div>
-
-                {% if profile.facebook or profile.instagram or profile.linkedin or profile.github %}
-                    <div class="social-row" aria-label="Social profiles">
-                        {% if profile.facebook %}<a href="{{ profile.facebook }}" class="social-link" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>{% endif %}
-                        {% if profile.instagram %}<a href="{{ profile.instagram }}" class="social-link" target="_blank" rel="noopener" aria-label="Instagram"><i class="bi bi-instagram"></i></a>{% endif %}
-                        {% if profile.linkedin %}<a href="{{ profile.linkedin }}" class="social-link" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>{% endif %}
-                        {% if profile.github %}<a href="{{ profile.github }}" class="social-link" target="_blank" rel="noopener" aria-label="GitHub"><i class="bi bi-github"></i></a>{% endif %}
-                    </div>
-                {% endif %}
-
-                {% if profile.address %}<div class="profile-address"><i class="bi bi-geo-alt-fill"></i><span>{{ profile.address }}</span></div>{% endif %}
-
-                <div class="collapse" id="profileQr">
-                    <div class="profile-qr-panel">
-                        <strong>Scan to open this profile</strong>
-                        <p class="small text-muted mb-0">Use your phone camera when NFC isn't available.</p>
-                        <img src="{% url 'card_qr' card.public_token %}" alt="QR code for {{ profile.public_name }}">
-                        <hr><strong>Offline contact QR</strong><p class="small text-muted">A snapshot of essential contact details and this profile link.</p>
-                        <img src="{% url 'offline_contact_qr' card.public_token %}" alt="Offline contact QR for {{ profile.public_name }}">
-                    </div>
-                </div>
-            </div>
+                {% include "profiles/_personal_profile_card.html" with preview=False %}
             {% endif %}
-            <footer class="public-profile-footer">Shared with NexTap · Tap once. Share everything.</footer>
+            {% if business %}<footer class="public-profile-footer">Shared with NexTap · Tap once. Share everything.</footer>{% endif %}
         </article>
     </div>
 </section>

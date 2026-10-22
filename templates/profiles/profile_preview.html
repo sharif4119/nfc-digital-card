@@ -1,50 +1,19 @@
 {% extends "base.html" %}
-
-{% block title %}Profile Preview{% endblock %}
-{% block body_class %}preview-page{% endblock %}
+{% block title %}Profile Preview · NexTap{% endblock %}
+{% block body_class %}preview-page personal-preview-page{% endblock %}
 
 {% block content %}
-<section class="page-shell">
+<section class="page-shell personal-preview-shell">
     <div class="container">
-        <div class="page-heading">
-            <div><div class="eyebrow">Private preview</div><h1>Your digital profile</h1><p>This preview shows how your professional details come together.</p></div>
-            <a href="{% url 'edit_profile' %}" class="btn btn-primary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Edit Profile</a>
-        </div>
-
-        <article class="digital-profile-card">
-            <div class="profile-cover"></div>
-            <div class="profile-content">
-                {% if profile.profile_picture %}
-                    <img src="{{ profile.profile_picture.url }}" alt="{{ profile.public_name }}" class="public-profile-photo">
-                {% else %}
-                    <div class="public-profile-placeholder">{{ profile.public_name|first|upper }}</div>
-                {% endif %}
-                <div class="profile-identity">
-                    <h1>{{ profile.public_name }}</h1>
-                    {% if profile.job_title or profile.company %}
-                        <p class="profile-role">{% if profile.job_title %}{{ profile.job_title }}{% endif %}{% if profile.job_title and profile.company %}<span class="mx-1">·</span>{% endif %}{% if profile.company %}<span class="profile-company">{{ profile.company }}</span>{% endif %}</p>
-                    {% endif %}
-                    {% if profile.bio %}<p class="profile-bio">{{ profile.bio|linebreaksbr }}</p>{% endif %}
-                </div>
-
-                <div class="contact-action-grid mt-4">
-                    {% if profile.phone %}<a href="tel:{{ profile.phone }}" class="contact-action"><i class="bi bi-telephone"></i><span>{{ profile.phone }}</span></a>{% endif %}
-                    {% if profile.email %}<a href="mailto:{{ profile.email }}" class="contact-action"><i class="bi bi-envelope"></i><span>{{ profile.email }}</span></a>{% endif %}
-                    {% if profile.website %}<a href="{{ profile.website }}" class="contact-action" target="_blank" rel="noopener"><i class="bi bi-globe2"></i><span>Visit website</span></a>{% endif %}
-                    {% if profile.whatsapp %}<a href="https://wa.me/{{ profile.whatsapp }}" class="contact-action" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i><span>WhatsApp</span></a>{% endif %}
-                </div>
-
-                {% if profile.facebook or profile.instagram or profile.linkedin or profile.github %}
-                    <div class="social-row">
-                        {% if profile.facebook %}<a href="{{ profile.facebook }}" class="social-link" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>{% endif %}
-                        {% if profile.instagram %}<a href="{{ profile.instagram }}" class="social-link" target="_blank" rel="noopener" aria-label="Instagram"><i class="bi bi-instagram"></i></a>{% endif %}
-                        {% if profile.linkedin %}<a href="{{ profile.linkedin }}" class="social-link" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>{% endif %}
-                        {% if profile.github %}<a href="{{ profile.github }}" class="social-link" target="_blank" rel="noopener" aria-label="GitHub"><i class="bi bi-github"></i></a>{% endif %}
-                    </div>
-                {% endif %}
-                {% if profile.address %}<div class="profile-address"><i class="bi bi-geo-alt-fill"></i><span>{{ profile.address }}</span></div>{% endif %}
-            </div>
-            <footer class="public-profile-footer">NexTap profile preview · Only you can see this page.</footer>
+        <header class="personal-preview-heading">
+            <div><div class="eyebrow">Private preview</div><h1>Your digital profile</h1><p>See how your saved professional details appear together.</p></div>
+            <nav class="personal-preview-actions" aria-label="Profile preview navigation">
+                <a href="{% url 'edit_profile' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Edit Profile</a>
+                <a href="{% url 'edit_profile' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit Profile</a>
+            </nav>
+        </header>
+        <article class="personal-digital-profile" aria-label="Personal digital profile preview">
+            {% include "profiles/_personal_profile_card.html" with preview=True %}
         </article>
     </div>
 </section>

@@ -22,6 +22,41 @@ def _fold(line):
     return "\r\n".join(pieces)
 
 
+def _personal_vcard_lines(profile, *, offline=False):
+    lines = ["N:;" + escape(profile.public_name) + ";;;", "FN:" + escape(profile.public_name)]
+    if profile.company and not offline:
+        lines.append("ORG:" + escape(profile.company))
+    if profile.job_title and not offline:
+        lines.append("TITLE:" + escape(profile.job_title))
+    if profile.phone:
+        lines.append("TEL:" + escape(profile.phone))
+    if profile.whatsapp:
+        lines.append("TEL;TYPE=CELL:" + escape(profile.whatsapp))
+    if profile.email:
+        lines.append("EMAIL:" + escape(profile.email))
+    if profile.website and not offline:
+        lines.append("URL:" + escape(profile.website))
+    if profile.bio:
+        lines.append("NOTE:" + escape(profile.bio[:120] if offline else profile.bio))
+    if profile.address and not offline:
+        lines.append("ADR:;;" + escape(profile.address) + ";;;;")
+    if not offline:
+        for social_name in ("facebook", "instagram", "linkedin", "github"):
+            value = getattr(profile, social_name, "")
+            if value:
+                lines.append("X-SOCIALPROFILE;TYPE=" + social_name.upper() + ":" + escape(value))
+    return lines
+
+
+def build_profile_vcard(profile, *, profile_url=""):
+    """Build a personal contact vCard for an authenticated owner preview."""
+    lines = ["BEGIN:VCARD", "VERSION:3.0", *_personal_vcard_lines(profile)]
+    if profile_url:
+        lines.append("URL:" + escape(profile_url))
+    lines.append("END:VCARD")
+    return "\r\n".join(_fold(line) for line in lines) + "\r\n"
+
+
 def build_vcard(card, *, offline=False):
     business = card.business_profile
     representative = card.representative
@@ -70,22 +105,7 @@ def build_vcard(card, *, offline=False):
             lines.append("ADR;TYPE=HOME:;;" + escape(identity["address"]) + ";;;;")
     else:
         profile = card.owner.profile
-        lines.append("N:;" + escape(profile.public_name) + ";;;")
-        lines.append("FN:" + escape(profile.public_name))
-        if profile.company and not offline:
-            lines.append("ORG:" + escape(profile.company))
-        if profile.job_title and not offline:
-            lines.append("TITLE:" + escape(profile.job_title))
-        if profile.phone:
-            lines.append("TEL:" + escape(profile.phone))
-        if profile.email:
-            lines.append("EMAIL:" + escape(profile.email))
-        if profile.website and not offline:
-            lines.append("URL:" + escape(profile.website))
-        if profile.bio:
-            lines.append("NOTE:" + escape(profile.bio[:120] if offline else profile.bio))
-        if profile.address and not offline:
-            lines.append("ADR:;;" + escape(profile.address) + ";;;;")
+        lines.extend(_personal_vcard_lines(profile, offline=offline))
     lines.append("URL:" + escape(card.public_url))
     lines.append("END:VCARD")
     return "\r\n".join(_fold(line) for line in lines) + "\r\n"
