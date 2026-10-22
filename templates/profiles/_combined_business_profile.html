@@ -6,30 +6,11 @@
             {% else %}<span aria-hidden="true">{% if business_identity.name %}{{ business_identity.name|first|upper }}{% else %}<i class="bi bi-person" aria-hidden="true"></i>{% endif %}</span>{% endif %}
         </div>
         <div class="nxt-person-content">
-            {% if business_identity %}
-                <div class="eyebrow">{% if business_identity.kind == "representative" %}Card representative{% elif business.profile_type == "ORGANIZATION" %}Organization owner{% else %}Business owner{% endif %}</div>
-                <h2 id="nxt-person-name">{{ business_identity.name }}</h2>
-                {% if business_identity.designation %}<p class="nxt-person-role">{{ business_identity.designation }}</p>{% endif %}
-                {% if business_identity.bio %}<p class="nxt-person-bio">{{ business_identity.bio|linebreaksbr }}</p>{% endif %}
-                {% if business_identity.phone or business_identity.email or business_identity.whatsapp or business_identity.website or business_identity.address %}
-                    <div class="nxt-person-contacts">
-                        {% if business_identity.phone %}<a href="tel:{{ business_identity.phone }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ business_identity.phone }}</a>{% endif %}
-                        {% if business_identity.email %}<a href="mailto:{{ business_identity.email }}"><i class="bi bi-envelope" aria-hidden="true"></i>{{ business_identity.email }}</a>{% endif %}
-                        {% if business_identity.whatsapp %}<a href="https://wa.me/{{ business_identity.whatsapp }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i>WhatsApp</a>{% endif %}
-                        {% if business_identity.website %}<a href="{{ business_identity.website }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-globe2" aria-hidden="true"></i>Personal website</a>{% endif %}
-                        {% if business_identity.address %}<span><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ business_identity.address }}</span>{% endif %}
-                    </div>
-                {% endif %}
-                {% if business_identity.facebook or business_identity.instagram or business_identity.linkedin or business_identity.github %}
-                    <nav class="nxt-person-socials" aria-label="Personal social links">
-                        {% if business_identity.facebook %}<a href="{{ business_identity.facebook }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook" aria-hidden="true"></i></a>{% endif %}
-                        {% if business_identity.instagram %}<a href="{{ business_identity.instagram }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="bi bi-instagram" aria-hidden="true"></i></a>{% endif %}
-                        {% if business_identity.linkedin %}<a href="{{ business_identity.linkedin }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
-                        {% if business_identity.github %}<a href="{{ business_identity.github }}" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
-                    </nav>
-                {% endif %}
-            {% endif %}
+            <h2 id="nxt-person-name">{{ business_identity.name }}</h2>
+            {% if business_identity.designation %}<p class="nxt-person-role">{{ business_identity.designation }}</p>{% endif %}
+            {% if business_identity.bio %}<p class="nxt-person-bio">{{ business_identity.bio|linebreaksbr }}</p>{% endif %}
         </div>
+        {% if personal_profile_url %}<a class="btn btn-sm btn-outline-primary nxt-view-personal-profile" href="{{ personal_profile_url }}">View Personal Profile</a>{% endif %}
     </section>{% endif %}
 
     <section class="nxt-business-identity nxt-combined-business" aria-labelledby="nxt-business-name">

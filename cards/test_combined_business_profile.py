@@ -81,9 +81,81 @@ class CombinedBusinessProfileTests(TestCase):
         _, _, card = self._card()
         response = self.client.get(reverse("public_card", args=[card.public_token]))
         self.assertContains(response, "Private Owner Name")
-        self.assertContains(response, "+8801700111222")
+        self.assertContains(response, "Founder")
+        self.assertNotContains(response, "+8801700111222")
         self.assertNotContains(response, "private@example.com")
         self.assertNotContains(response, "Account Purchaser")
+
+    def test_combined_identity_is_only_a_summary_without_personal_contacts(self):
+        self.business.show_owner_identity = True
+        self.business.save()
+        self.profile.bio = "A short public introduction."
+        self.profile.whatsapp = "8801700111222"
+        self.profile.address = "Private home address"
+        self.profile.facebook = "https://facebook.com/private-owner"
+        self.profile.save()
+        self.business.share_owner_phone = True
+        self.business.share_owner_email = True
+        self.business.share_owner_whatsapp = True
+        self.business.share_owner_address = True
+        self.business.share_owner_social = True
+        self.business.save()
+        _, _, card = self._card()
+
+        response = self.client.get(reverse("public_card", args=[card.public_token]))
+        body = response.content.decode()
+        summary = body.split('<section class="nxt-person-identity"', 1)[1].split("</section>", 1)[0]
+        self.assertIn("Private Owner Name", summary)
+        self.assertIn("Founder", summary)
+        self.assertIn("A short public introduction.", summary)
+        for private_value in ("+8801700111222", "private@example.com", "Private home address", "private-owner"):
+            self.assertNotIn(private_value, summary)
+        self.assertNotContains(response, "nxt-person-contacts")
+        self.assertNotContains(response, "nxt-person-socials")
+
+    def test_private_preview_links_owner_identity_to_existing_personal_preview(self):
+        self.business.show_owner_identity = True
+        self.business.save()
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("business_profile_preview"))
+
+        self.assertContains(response, "View Personal Profile")
+        self.assertContains(response, f'href="{reverse("profile_preview")}"')
+
+    def test_public_owner_button_requires_an_active_standalone_personal_card(self):
+        self.business.show_owner_identity = True
+        self.business.save()
+        _, _, business_card = self._card()
+        hidden = self.client.get(reverse("public_card", args=[business_card.public_token]))
+        self.assertNotContains(hidden, "View Personal Profile")
+
+        personal_card = NFCCard.objects.create(
+            card_uid="COMBINED-PUBLIC-PERSONAL-DEST", owner=self.owner, status="INACTIVE",
+        )
+        inactive = self.client.get(reverse("public_card", args=[business_card.public_token]))
+        self.assertNotContains(inactive, "View Personal Profile")
+
+        personal_card.status = "ACTIVE"
+        personal_card.save(update_fields=["status"])
+        visible = self.client.get(reverse("public_card", args=[business_card.public_token]))
+        self.assertContains(visible, "View Personal Profile")
+        self.assertContains(visible, f'href="{reverse("public_card", args=[personal_card.public_token])}"')
+
+    def test_public_representative_button_is_hidden_without_a_personal_profile_mapping(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.show_owner_identity = True
+        self.business.save()
+        representative = BusinessRepresentative.objects.create(business=self.business, name="Organization Representative")
+        _, _, card = self._card(rep=representative)
+        NFCCard.objects.create(
+            card_uid="REPRESENTATIVE-OWNER-PERSONAL", owner=self.owner, status="ACTIVE",
+        )
+
+        response = self.client.get(reverse("public_card", args=[card.public_token]))
+
+        self.assertContains(response, "Organization Representative")
+        self.assertNotContains(response, "View Personal Profile")
 
     def test_business_multiple_cards_use_only_their_own_representatives(self):
         self.business.show_owner_identity = True
@@ -114,7 +186,7 @@ class CombinedBusinessProfileTests(TestCase):
         body = response.content.decode()
         self.assertLess(body.index("Principal Person"), body.index('<h2 id="nxt-business-name">'))
         self.assertContains(response, "Academic Programs")
-        self.assertContains(response, "principal@example.edu")
+        self.assertNotContains(response, "principal@example.edu")
         self.assertNotContains(response, "Private Owner Name")
 
     def test_public_business_page_has_no_empty_banner_or_generic_whatsapp_shortcut(self):
@@ -383,3 +455,4 @@ class CombinedBusinessProfileTests(TestCase):
         response = self.client.get(reverse("public_card", args=[personal.public_token]))
         self.assertContains(response, "Private Owner Name")
         self.assertNotContains(response, "NexTap Kitchen")
+        self.assertNotContains(response, "View Personal Profile")
