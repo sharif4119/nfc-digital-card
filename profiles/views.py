@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from .forms import ProfileForm, add_field_error_styles, normalize_web_url
 from .models import Profile
@@ -207,6 +208,7 @@ def business_profile_preview(request):
         "website_url": website_url,
         "featured_offerings": featured_offerings,
         "business_identity": business_identity, "identity_message": identity_message,
+        "personal_profile_url": reverse("profile_preview") if business_identity and business_identity["kind"] == "owner" else "",
         "allocations": allocations, "selected_allocation": selected_allocation,
         "selected_card": selected_card,
         "business_social_links": safe_social_links,

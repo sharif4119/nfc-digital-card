@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from .contact import build_vcard
@@ -58,6 +59,7 @@ def public_card_view(request, token):
         CardVisit.objects.create(card=card, visitor_hash=_visitor_hash(request))
     business = card.business_profile
     identity = None
+    personal_profile_url = ""
     identity_message = ""
     website_url = ""
     logo_url = ""
@@ -71,6 +73,14 @@ def public_card_view(request, token):
                           else card.representative)
         identity = resolve_business_identity(business, getattr(card.owner, "profile", None), order, representative)
         identity_message = business_identity_message(business, order) if identity is None else ""
+        # Representatives are not linked to User/Profile records, so only an
+        # owner's Business Single identity can resolve to a personal NFC page.
+        if identity and identity["kind"] == "owner":
+            personal_card = NFCCard.objects.filter(
+                owner=card.owner, business_profile__isnull=True, status="ACTIVE",
+            ).order_by("-activated_at", "-created_at", "-pk").first()
+            if personal_card:
+                personal_profile_url = reverse("public_card", args=[personal_card.public_token])
         for field, value in (("website", business.website), ("facebook", business.facebook),
                              ("instagram", business.instagram), ("linkedin", business.linkedin)):
             try:
@@ -102,6 +112,7 @@ def public_card_view(request, token):
         "card": card, "profile": getattr(card.owner, "profile", None),
         "business": business, "representative": card.representative,
         "business_identity": identity, "identity_message": identity_message,
+        "personal_profile_url": personal_profile_url,
         "website_url": website_url, "business_logo_url": logo_url,
         "business_banner_url": banner_url, "business_social_links": social_links,
         "featured_offerings": featured_offerings,

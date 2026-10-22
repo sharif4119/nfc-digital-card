@@ -533,11 +533,12 @@ a:hover { color: #004fcf; }
 .nxt-preview-selector .form-label { flex: 0 0 auto; margin: 0; color: #34445a; font-size: .84rem; font-weight: 650; }
 .nxt-preview-selector .form-select { min-width: 0; min-height: 38px; border-radius: 8px; }
 .nxt-combined-profile { max-width: 1000px; margin: 0 auto; color: var(--ink); }
-.nxt-person-identity { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 1.15rem; align-items: center; padding: 1.15rem 1.25rem; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 5px 20px rgba(12, 31, 56, .045); }
+.nxt-person-identity { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 1.15rem; align-items: center; padding: 1.15rem 1.25rem; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 5px 20px rgba(12, 31, 56, .045); }
 .nxt-person-avatar { display: grid; width: 88px; height: 88px; overflow: hidden; place-items: center; border: 1px solid #dbe5f0; border-radius: 18px; color: #1768b5; background: linear-gradient(145deg, #eff7ff, #e5f9fb); }
 .nxt-person-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .nxt-person-avatar span { font-size: 2rem; font-weight: 750; }
 .nxt-person-content { min-width: 0; }
+.nxt-view-personal-profile { justify-self: end; white-space: nowrap; }
 .nxt-person-content h2 { margin: .05rem 0 .15rem; color: var(--ink); font-size: clamp(1.35rem, 3vw, 1.85rem); font-weight: 800; letter-spacing: -.035em; overflow-wrap: anywhere; }
 .nxt-person-role { margin: 0; color: #335373; font-size: .92rem; font-weight: 650; }
 .nxt-person-bio { margin: .45rem 0 0; color: #536176; font-size: .88rem; line-height: 1.55; }
@@ -590,6 +591,7 @@ a:hover { color: #004fcf; }
   .nxt-person-identity { grid-template-columns: 72px minmax(0, 1fr); gap: .8rem; padding: .9rem; }
   .nxt-person-avatar { width: 68px; height: 68px; border-radius: 15px; }
   .nxt-person-avatar span { font-size: 1.65rem; }
+  .nxt-view-personal-profile { grid-column: 2; justify-self: start; }
   .nxt-combined-business { grid-template-columns: 1fr; }
   .nxt-combined-business .nxt-org-cover { min-height: 155px; }
   .nxt-combined-business .nxt-org-cover.has-no-banner { min-height: 0; }
