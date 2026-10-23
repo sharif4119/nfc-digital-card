@@ -116,11 +116,12 @@ def build_vcard(card, *, offline=False):
                 public_contact_values.add(value.strip())
                 lines.append(prefix + escape(value.strip()))
 
-        if identity and identity["phone"]:
+        share_identity_contacts = bool(identity and identity["kind"] == "representative")
+        if share_identity_contacts and identity["phone"]:
             add_public_contact("TEL;TYPE=WORK:", identity["phone"])
-        if identity and identity["email"]:
+        if share_identity_contacts and identity["email"]:
             add_public_contact("EMAIL;TYPE=WORK:", identity["email"])
-        if identity and identity["whatsapp"]:
+        if share_identity_contacts and identity["whatsapp"]:
             add_public_contact("TEL;TYPE=CELL:", identity["whatsapp"])
         if business.whatsapp:
             add_public_contact("TEL;TYPE=WORK:", business.whatsapp)
@@ -130,9 +131,9 @@ def build_vcard(card, *, offline=False):
             add_public_contact("EMAIL;TYPE=WORK:", business.email)
         if business.website:
             add_public_contact("URL:", business.website)
-        if identity and identity["website"] and identity["website"] != business.website:
+        if share_identity_contacts and identity["website"] and identity["website"] != business.website:
             add_public_contact("URL;TYPE=HOME:", identity["website"])
-        if identity:
+        if share_identity_contacts:
             for social_name in ("facebook", "instagram", "linkedin", "github"):
                 if identity[social_name]:
                     lines.append("X-SOCIALPROFILE;TYPE=" + social_name.upper() + ":" + escape(identity[social_name]))
@@ -140,7 +141,7 @@ def build_vcard(card, *, offline=False):
             lines.append("NOTE:" + escape(business.description[:120] if offline else business.description))
         if business.address and (not offline or len(business.address) <= 120):
             lines.append("ADR;TYPE=WORK:;;" + escape(business.address[:120] if offline else business.address) + ";;;;")
-        if identity and identity["address"] and identity["address"] != business.address:
+        if share_identity_contacts and identity["address"] and identity["address"] != business.address:
             lines.append("ADR;TYPE=HOME:;;" + escape(identity["address"][:120] if offline else identity["address"]) + ";;;;")
     else:
         profile = card.owner.profile

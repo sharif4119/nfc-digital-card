@@ -15,8 +15,8 @@ def _image_url(field):
 def resolve_business_identity(business, owner_profile=None, order=None, representative=None):
     """Return only the identity and contact fields explicitly eligible to be public.
 
-    The existing show_owner_identity setting is the shared public identity
-    switch. Small-business single cards may use the owner's profile; multiple
+    The existing show_owner_identity setting controls the public summary.
+    Owner contact details are never inherited from legacy sharing flags; multiple
     cards and organizations use only the representative assigned to that card.
     """
     if representative and representative.business_id != business.pk:
@@ -34,15 +34,12 @@ def resolve_business_identity(business, owner_profile=None, order=None, represen
                 "kind": "owner", "name": owner_profile.full_name,
                 "designation": owner_profile.job_title, "bio": owner_profile.bio,
                 "photo_url": _image_url(owner_profile.profile_picture),
-                "phone": owner_profile.phone if business.share_owner_phone else "",
-                "email": owner_profile.email if business.share_owner_email else "",
-                "whatsapp": owner_profile.whatsapp if business.share_owner_whatsapp else "",
-                "website": owner_profile.website if business.share_owner_website else "",
-                "address": owner_profile.address if business.share_owner_address else "",
-                "facebook": owner_profile.facebook if business.share_owner_social else "",
-                "instagram": owner_profile.instagram if business.share_owner_social else "",
-                "linkedin": owner_profile.linkedin if business.share_owner_social else "",
-                "github": owner_profile.github if business.share_owner_social else "",
+                # The business-level option controls only this identity summary.
+                # Personal contact data belongs to the separately public Personal
+                # Card and is never inherited from legacy business share flags.
+                "phone": "", "email": "", "whatsapp": "", "website": "",
+                "address": "", "facebook": "", "instagram": "",
+                "linkedin": "", "github": "",
             }
         return None
 

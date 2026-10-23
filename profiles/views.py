@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -19,6 +20,8 @@ from django.db.models import Count
 from django.utils.dateparse import parse_date
 from django.utils import timezone
 from datetime import datetime, time, timedelta
+import re
+from urllib.parse import quote
 
 
 @login_required
@@ -199,11 +202,8 @@ def business_profile_preview(request):
             if url:
                 safe_social_links[field] = url
     personal_profile_url = ""
-    if business_identity:
-        if business_identity["kind"] == "owner":
-            personal_profile_url = reverse("profile_preview")
-        elif selected_card and selected_card.status == "ACTIVE":
-            personal_profile_url = reverse("public_person_profile", args=[selected_card.public_token])
+    if business_identity and business_identity["kind"] == "owner":
+        personal_profile_url = reverse("profile_preview")
     return render(request, "profiles/business_preview.html", {
         "business": business,
         "is_organization": bool(business and business.profile_type == "ORGANIZATION"),
@@ -244,12 +244,26 @@ def business_cards(request):
     inquiry_counts = dict(inquiries.values("card_id").annotate(total=Count("id")).values_list("card_id", "total"))
     card_rows = [{"card": card, "visits": counts.get(card.id, {}).get("total", 0), "unique": counts.get(card.id, {}).get("unique", 0), "inquiries": inquiry_counts.get(card.id, 0)} for card in cards]
     allocations = CardAllocation.objects.filter(order__user=request.user, order__business_profile=business).select_related("card", "representative", "order")
+    recent_inquiries = list(inquiries.select_related("card")[:50])
+    inquiry_rows = []
+    for inquiry in recent_inquiries:
+        contact = inquiry.display_contact_info
+        contact_href = ""
+        try:
+            validate_email(contact)
+            contact_href = "mailto:" + quote(contact, safe="@.+-_")
+        except ValidationError:
+            digits = re.sub(r"[\s().-]", "", contact)
+            if re.fullmatch(r"\+?\d{7,15}", digits):
+                contact_href = "tel:" + ("+" if digits.startswith("+") else "") + digits.lstrip("+")
+        inquiry_rows.append({"inquiry": inquiry, "contact": contact, "contact_href": contact_href})
     return render(request, "profiles/business_cards.html", {
         "business": business, "card_rows": card_rows, "allocations": allocations,
         "is_organization": business.profile_type == "ORGANIZATION",
         "profile_term": "Organization" if business.profile_type == "ORGANIZATION" else "Business",
         "total_visits": visits.count(), "unique_visitors": visits.values("visitor_hash").distinct().count(),
-        "inquiry_count": inquiries.count(), "inquiries": inquiries.select_related("card")[:50],
+        "inquiry_count": inquiries.count(), "inquiries": recent_inquiries,
+        "inquiry_rows": inquiry_rows,
         "start_date": start_date, "end_date": end_date,
     })
 

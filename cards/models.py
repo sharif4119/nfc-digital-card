@@ -132,6 +132,7 @@ class CardInquiry(models.Model):
     name = models.CharField(max_length=150)
     phone = models.CharField(max_length=30, blank=True)
     email = models.EmailField(blank=True)
+    contact_info = models.CharField(max_length=320, blank=True)
     interest = models.CharField(max_length=150)
     message = models.TextField(blank=True)
     consent = models.BooleanField(default=False)
@@ -140,3 +141,10 @@ class CardInquiry(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+    @property
+    def display_contact_info(self):
+        if self.contact_info:
+            return self.contact_info
+        legacy_values = [value for value in (self.email, self.phone) if value]
+        return " · ".join(legacy_values)

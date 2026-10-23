@@ -189,9 +189,7 @@ class BusinessProfileForm(forms.ModelForm):
             "profile_type", "organization_category", "name", "logo", "banner",
             "description", "phone", "email", "website", "address",
             "facebook", "instagram", "linkedin", "whatsapp",
-            "show_owner_identity", "share_owner_phone", "share_owner_email",
-            "share_owner_whatsapp", "share_owner_website", "share_owner_address",
-            "share_owner_social",
+            "show_owner_identity",
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
@@ -226,21 +224,12 @@ class BusinessProfileForm(forms.ModelForm):
         )
         self.fields["profile_type"].widget.attrs["data-business-profile-type"] = ""
         self.fields["organization_category"].widget.attrs["data-organization-category"] = ""
-        for name in ("show_owner_identity", "share_owner_phone", "share_owner_email",
-                     "share_owner_whatsapp", "share_owner_website", "share_owner_address",
-                     "share_owner_social"):
-            self.fields[name].widget.attrs["class"] = "form-check-input"
+        self.fields["show_owner_identity"].widget.attrs["class"] = "form-check-input"
         self.fields["banner"].help_text = "Optional organization cover image · up to 5 MB"
         self.fields["show_owner_identity"].label = "Show Personal/Representative Information"
         self.fields["show_owner_identity"].help_text = (
-            "Display the owner or assigned representative above your business or organization details."
+            "Display personal or representative information alongside this business or organization profile."
         )
-        self.fields["share_owner_phone"].label = "Share my personal phone"
-        self.fields["share_owner_email"].label = "Share my personal email"
-        self.fields["share_owner_whatsapp"].label = "Share my personal WhatsApp"
-        self.fields["share_owner_website"].label = "Share my personal website"
-        self.fields["share_owner_address"].label = "Share my personal address"
-        self.fields["share_owner_social"].label = "Share my personal social links"
         self.fields["description"].widget.attrs["placeholder"] = (
             "A short introduction to your organization" if organization
             else "A short introduction to your business and what you offer"

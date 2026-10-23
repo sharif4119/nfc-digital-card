@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import qrcode
 from django.contrib.auth.models import User
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 
@@ -164,15 +164,19 @@ class BusinessCardFlowTests(TestCase):
         self.assertEqual(CardVisit.objects.filter(card=card).values("visitor_hash").distinct().count(), 1)
         self.client.get(reverse("offline_contact_qr", args=[card.public_token]))
         self.assertEqual(CardVisit.objects.filter(card=card).count(), 2)
-        inquiry = {"name": "Visitor", "email": "visitor@example.com", "interest": "Courses", "message": "Please call", "consent": "on"}
+        inquiry = {"name": "Visitor", "contact_info": "visitor@example.com", "message": "Please call"}
         self.assertEqual(self.client.post(url, inquiry).status_code, 302)
-        self.assertEqual(CardInquiry.objects.filter(card=card).count(), 1)
+        saved_inquiry = CardInquiry.objects.get(card=card)
+        self.assertEqual(saved_inquiry.contact_info, "visitor@example.com")
+        self.assertEqual(saved_inquiry.email, "visitor@example.com")
+        self.assertEqual(saved_inquiry.interest, "")
+        self.assertFalse(saved_inquiry.consent)
         self.client.force_login(self.owner)
         self.assertContains(self.client.get(reverse("business_cards")), "Visitor")
         self.client.force_login(self.other)
         self.assertNotContains(self.client.get(reverse("dashboard")), "visitor@example.com")
 
-    def test_inquiry_needs_consent_and_rate_limit(self):
+    def test_inquiry_requires_all_three_fields_and_rate_limit(self):
         order = self._order(self.product)
         allocation = order.allocations.get()
         self._prepare(order, allocation)
@@ -181,13 +185,88 @@ class BusinessCardFlowTests(TestCase):
         card.status = "ACTIVE"
         card.save(update_fields=["status"])
         url = reverse("public_card", args=[card.public_token])
-        data = {"name": "Visitor", "email": "visitor@example.com", "interest": "Courses"}
-        self.assertEqual(self.client.post(url, data).status_code, 200)
+        data = {"name": "Visitor", "contact_info": "visitor@example.com", "message": "Courses?"}
+        self.assertEqual(self.client.post(url, {**data, "message": ""}).status_code, 200)
         self.assertEqual(CardInquiry.objects.count(), 0)
         for _ in range(3):
-            self.assertEqual(self.client.post(url, {**data, "consent": "on"}).status_code, 302)
-        self.assertEqual(self.client.post(url, {**data, "consent": "on"}).status_code, 200)
+            self.assertEqual(self.client.post(url, data).status_code, 302)
+        self.assertEqual(self.client.post(url, data).status_code, 200)
         self.assertEqual(CardInquiry.objects.count(), 3)
+
+    def test_inquiry_form_has_three_visible_required_fields_and_accepts_contact_formats(self):
+        order = self._order(self.product)
+        allocation = order.allocations.get()
+        self._prepare(order, allocation)
+        allocation.refresh_from_db()
+        card = allocation.card
+        card.status = "ACTIVE"
+        card.save(update_fields=["status"])
+        url = reverse("public_card", args=[card.public_token])
+        response = self.client.get(url)
+        form = response.context["inquiry_form"]
+        self.assertEqual([field.name for field in form.visible_fields()], ["name", "contact_info", "message"])
+        self.assertEqual(response.context["inquiry_heading"], "Contact this Business")
+        self.assertContains(response, "Your contact information will only be shared with this business or organization to respond to your inquiry.")
+        spam = self.client.post(url, {
+            "name": "Visitor", "contact_info": "visitor@example.com",
+            "message": "Need details", "website_check": "filled by bot",
+        })
+        self.assertEqual(spam.status_code, 200)
+        self.assertEqual(CardInquiry.objects.count(), 0)
+
+        for missing in ("name", "contact_info", "message"):
+            data = {"name": "Visitor", "contact_info": "@telegram_user", "message": "Need details"}
+            data[missing] = ""
+            self.assertEqual(self.client.post(url, data).status_code, 200)
+        self.assertEqual(CardInquiry.objects.count(), 0)
+
+        for index, contact in enumerate(("visitor@example.com", "+8801712345678", "@telegram_user")):
+            self.client.post(url, {"name": f"Visitor {index}", "contact_info": contact, "message": "Need details"})
+        self.assertEqual(CardInquiry.objects.count(), 3)
+        self.assertEqual(CardInquiry.objects.get(name="Visitor 2").contact_info, "@telegram_user")
+
+        self.client.force_login(self.owner)
+        dashboard = self.client.get(reverse("business_cards"))
+        rows = {row["inquiry"].contact_info: row for row in dashboard.context["inquiry_rows"]}
+        self.assertEqual(rows["visitor@example.com"]["contact_href"], "mailto:visitor@example.com")
+        self.assertIn("+8801712345678", rows["+8801712345678"]["contact_href"])
+        self.assertEqual(rows["@telegram_user"]["contact_href"], "")
+        self.assertContains(dashboard, "@telegram_user")
+
+        legacy = CardInquiry.objects.create(
+            card=card, name="Legacy visitor", phone="01700000000", email="legacy@example.com",
+            interest="Courses", message="Old message", source_hash="legacy-source",
+        )
+        legacy.refresh_from_db()
+        self.assertEqual(legacy.display_contact_info, "legacy@example.com · 01700000000")
+        dashboard = self.client.get(reverse("business_cards"))
+        self.assertContains(dashboard, "legacy@example.com · 01700000000")
+
+        self.business.profile_type = "ORGANIZATION"
+        self.business.organization_category = "COMPANY"
+        self.business.save()
+        self.assertEqual(self.client.get(url).context["inquiry_heading"], "Contact this Organization")
+        self.business.organization_category = "EDUCATIONAL_INSTITUTE"
+        self.business.save()
+        self.assertEqual(self.client.get(url).context["inquiry_heading"], "Contact this Institute")
+
+    def test_inquiry_still_requires_csrf_token(self):
+        order = self._order(self.product)
+        allocation = order.allocations.get()
+        self._prepare(order, allocation)
+        allocation.refresh_from_db()
+        card = allocation.card
+        card.status = "ACTIVE"
+        card.save(update_fields=["status"])
+        url = reverse("public_card", args=[card.public_token])
+        csrf_client = Client(enforce_csrf_checks=True)
+        data = {"name": "Visitor", "contact_info": "visitor@example.com", "message": "Need details"}
+        self.assertEqual(csrf_client.post(url, data).status_code, 403)
+        csrf_client.get(url)
+        csrf_token = csrf_client.cookies["csrftoken"].value
+        response = csrf_client.post(url, data, HTTP_X_CSRFTOKEN=csrf_token)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(CardInquiry.objects.count(), 1)
 
     def test_business_pdf_contains_offline_contact_qr_and_stock_size(self):
         order = self._order(self.product)
@@ -455,7 +534,7 @@ class BusinessCardFlowTests(TestCase):
         self.client.get(reverse("public_card", args=[cards[0].public_token]))
         self.client.get(reverse("public_card", args=[cards[1].public_token]))
         self.client.post(reverse("public_card", args=[cards[0].public_token]), {
-            "name": "Visitor", "email": "visitor@example.com", "interest": "Courses", "consent": "on",
+            "name": "Visitor", "contact_info": "visitor@example.com", "message": "Courses",
         })
         self.client.force_login(self.owner)
         response = self.client.get(reverse("business_cards"))
