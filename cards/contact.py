@@ -1,6 +1,7 @@
 """vCard 3.0 used by downloads, offline QR and print artwork."""
 
 from .presentation import resolve_business_identity
+from profiles.models import Profile
 
 
 def escape(value):
@@ -98,10 +99,19 @@ def build_vcard(card, *, offline=False):
         order = allocation.order if allocation else getattr(card, "assigned_order", None)
         representative = (allocation.representative if allocation and allocation.representative_id
                           else representative)
-        identity = resolve_business_identity(
-            business, getattr(card.owner, "profile", None), order, representative
+        owner_profile = Profile.objects.filter(user_id=card.owner_id).first() if card.owner_id else None
+        identity = resolve_business_identity(business, owner_profile, order, representative)
+        order_type = getattr(order, "business_order_type", "") if order else ""
+        share_owner_contacts = bool(
+            business.show_owner_identity
+            and business.profile_type != "ORGANIZATION"
+            and order_type in ("", "SINGLE")
+            and owner_profile
+            and owner_profile.full_name
         )
-        contact_name = identity["name"] if identity else business.name
+        contact_name = identity["name"] if identity else (
+            owner_profile.full_name if share_owner_contacts else business.name
+        )
         lines.append("N:;" + escape(contact_name) + ";;;")
         lines.append("FN:" + escape(contact_name))
         lines.append("ORG:" + escape(business.name))
@@ -117,12 +127,19 @@ def build_vcard(card, *, offline=False):
                 lines.append(prefix + escape(value.strip()))
 
         share_identity_contacts = bool(identity and identity["kind"] == "representative")
-        if share_identity_contacts and identity["phone"]:
-            add_public_contact("TEL;TYPE=WORK:", identity["phone"])
-        if share_identity_contacts and identity["email"]:
-            add_public_contact("EMAIL;TYPE=WORK:", identity["email"])
-        if share_identity_contacts and identity["whatsapp"]:
-            add_public_contact("TEL;TYPE=CELL:", identity["whatsapp"])
+        share_owner_contacts = share_owner_contacts or bool(identity and identity["kind"] == "owner")
+        owner_profile = owner_profile if share_owner_contacts else None
+        identity_phone = identity["phone"] if share_identity_contacts else getattr(owner_profile, "phone", "")
+        identity_email = identity["email"] if share_identity_contacts else getattr(owner_profile, "email", "")
+        identity_whatsapp = identity["whatsapp"] if share_identity_contacts else getattr(owner_profile, "whatsapp", "")
+        identity_website = identity["website"] if share_identity_contacts else getattr(owner_profile, "website", "")
+        identity_address = identity["address"] if share_identity_contacts else getattr(owner_profile, "address", "")
+        if (share_identity_contacts or share_owner_contacts) and identity_phone:
+            add_public_contact("TEL;TYPE=WORK:", identity_phone)
+        if (share_identity_contacts or share_owner_contacts) and identity_email:
+            add_public_contact("EMAIL;TYPE=WORK:", identity_email)
+        if (share_identity_contacts or share_owner_contacts) and identity_whatsapp:
+            add_public_contact("TEL;TYPE=CELL:", identity_whatsapp)
         if business.whatsapp:
             add_public_contact("TEL;TYPE=WORK:", business.whatsapp)
         if business.phone:
@@ -131,18 +148,19 @@ def build_vcard(card, *, offline=False):
             add_public_contact("EMAIL;TYPE=WORK:", business.email)
         if business.website:
             add_public_contact("URL:", business.website)
-        if share_identity_contacts and identity["website"] and identity["website"] != business.website:
-            add_public_contact("URL;TYPE=HOME:", identity["website"])
-        if share_identity_contacts:
+        if (share_identity_contacts or (share_owner_contacts and not offline)) and identity_website and identity_website != business.website:
+            add_public_contact("URL;TYPE=HOME:", identity_website)
+        if share_identity_contacts or (share_owner_contacts and not offline):
             for social_name in ("facebook", "instagram", "linkedin", "github"):
-                if identity[social_name]:
-                    lines.append("X-SOCIALPROFILE;TYPE=" + social_name.upper() + ":" + escape(identity[social_name]))
+                social_value = identity[social_name] if share_identity_contacts else getattr(owner_profile, social_name, "")
+                if social_value:
+                    lines.append("X-SOCIALPROFILE;TYPE=" + social_name.upper() + ":" + escape(social_value))
         if business.description and not offline:
             lines.append("NOTE:" + escape(business.description[:120] if offline else business.description))
         if business.address and (not offline or len(business.address) <= 120):
             lines.append("ADR;TYPE=WORK:;;" + escape(business.address[:120] if offline else business.address) + ";;;;")
-        if share_identity_contacts and identity["address"] and identity["address"] != business.address:
-            lines.append("ADR;TYPE=HOME:;;" + escape(identity["address"][:120] if offline else identity["address"]) + ";;;;")
+        if (share_identity_contacts or share_owner_contacts) and identity_address and identity_address != business.address:
+            lines.append("ADR;TYPE=HOME:;;" + escape(identity_address[:120] if offline else identity_address) + ";;;;")
     else:
         profile = card.owner.profile
         lines.extend(_personal_vcard_lines(profile, offline=offline))

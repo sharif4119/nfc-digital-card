@@ -81,12 +81,11 @@ def public_card_view(request, token):
                           else card.representative)
         identity = resolve_business_identity(business, getattr(card.owner, "profile", None), order, representative)
         identity_message = business_identity_message(business, order) if identity is None else ""
-        if identity and identity["kind"] == "owner" and getattr(order, "business_order_type", "") == "SINGLE":
-            personal_card = NFCCard.objects.filter(
-                owner_id=card.owner_id, business_profile__isnull=True, status="ACTIVE",
-            ).exclude(pk=card.pk).order_by("-created_at", "-pk").first()
-            if personal_card:
-                personal_profile_url = reverse("public_card", args=[personal_card.public_token])
+        order_type = getattr(order, "business_order_type", "") if order else ""
+        if (identity and identity["kind"] == "owner"
+                and order_type in ("", "SINGLE")
+                and business.profile_type != "ORGANIZATION"):
+            personal_profile_url = reverse("public_person_profile", args=[card.public_token])
         for field, value in (("website", business.website), ("facebook", business.facebook),
                              ("instagram", business.instagram), ("linkedin", business.linkedin)):
             try:
@@ -137,7 +136,7 @@ def _inquiry_heading(business):
 
 
 def public_person_profile(request, token):
-    """Show only the identity fields allowed for this active business card."""
+    """Show the identity authorized for this active business card."""
     card = _visible_card(token)
     _, identity = _resolve_public_business_identity(card)
 
@@ -178,6 +177,22 @@ def _resolve_public_business_identity(card):
     )
     if not identity:
         raise Http404("Personal details are not available for this card.")
+    order_type = getattr(order, "business_order_type", "") if order else ""
+    if (identity["kind"] == "owner" and business.profile_type != "ORGANIZATION"
+            and order_type in ("", "SINGLE")):
+        # The business-level visibility setting is the single public opt-in.
+        # Keep the compact summary resolver private, and expand only this
+        # business-card-specific full profile route with the owner's saved data.
+        profile = getattr(card.owner, "profile", None)
+        if profile is None or not profile.full_name:
+            raise Http404("Personal details are not available for this card.")
+        identity.update({
+            "phone": profile.phone, "email": profile.email,
+            "whatsapp": profile.whatsapp, "website": profile.website,
+            "address": profile.address, "facebook": profile.facebook,
+            "instagram": profile.instagram, "linkedin": profile.linkedin,
+            "github": profile.github,
+        })
     return business, identity
 
 
