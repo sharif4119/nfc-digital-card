@@ -6,11 +6,13 @@ from .views import (
     offline_contact_qr,
     public_card_view,
     public_person_profile,
+    public_person_vcard,
 )
 
 
 urlpatterns = [
     path("c/<str:token>/offline-qr/", offline_contact_qr, name="offline_contact_qr"),
+    path("c/<str:token>/person/contact/", public_person_vcard, name="public_person_vcard"),
     path("c/<str:token>/person/", public_person_profile, name="public_person_profile"),
     path(
         "c/<str:token>/",

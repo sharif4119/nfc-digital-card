@@ -57,6 +57,38 @@ def build_profile_vcard(profile, *, profile_url=""):
     return "\r\n".join(_fold(line) for line in lines) + "\r\n"
 
 
+def build_public_identity_vcard(identity, *, profile_url=""):
+    """Build a contact only from fields already permitted by business privacy rules."""
+    lines = [
+        "BEGIN:VCARD", "VERSION:3.0",
+        "N:;" + escape(identity.get("name")) + ";;;",
+        "FN:" + escape(identity.get("name")),
+    ]
+    if identity.get("designation"):
+        lines.append("TITLE:" + escape(identity["designation"]))
+    if identity.get("bio"):
+        lines.append("NOTE:" + escape(identity["bio"]))
+    if identity.get("phone"):
+        lines.append("TEL:" + escape(identity["phone"]))
+    if identity.get("email"):
+        lines.append("EMAIL:" + escape(identity["email"]))
+    if identity.get("whatsapp"):
+        lines.append("TEL;TYPE=CELL:" + escape(identity["whatsapp"]))
+    if identity.get("website"):
+        lines.append("URL:" + escape(identity["website"]))
+    if identity.get("address"):
+        lines.append("ADR:;;" + escape(identity["address"]) + ";;;;")
+    for social_name in ("facebook", "instagram", "linkedin", "github"):
+        if identity.get(social_name):
+            lines.append(
+                "X-SOCIALPROFILE;TYPE=" + social_name.upper() + ":" + escape(identity[social_name])
+            )
+    if profile_url:
+        lines.append("URL:" + escape(profile_url))
+    lines.append("END:VCARD")
+    return "\r\n".join(_fold(line) for line in lines) + "\r\n"
+
+
 def build_vcard(card, *, offline=False):
     business = card.business_profile
     representative = card.representative
