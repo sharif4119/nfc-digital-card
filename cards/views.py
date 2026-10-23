@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from .contact import build_vcard
+from .contact import build_public_identity_vcard, build_vcard
 from .forms import CardInquiryForm
 from .models import CardInquiry, CardVisit, NFCCard
 from .presentation import business_identity_message, resolve_business_identity
@@ -118,6 +118,32 @@ def public_card_view(request, token):
 def public_person_profile(request, token):
     """Show only the identity fields allowed for this active business card."""
     card = _visible_card(token)
+    _, identity = _resolve_public_business_identity(card)
+
+    def safe_url(value):
+        try:
+            return normalize_web_url(value)
+        except (ValidationError, ValueError):
+            return ""
+
+    website_url = safe_url(identity["website"])
+    social_links = {
+        field: url for field in ("facebook", "instagram", "linkedin", "github")
+        if (url := safe_url(identity[field]))
+    }
+    whatsapp_number = _whatsapp_link_number(identity["whatsapp"])
+
+    return render(request, "cards/public_person_profile.html", {
+        "business_profile_url": reverse("public_card", args=[card.public_token]),
+        "contact_download_url": reverse("public_person_vcard", args=[card.public_token]),
+        "identity": identity,
+        "website_url": website_url,
+        "social_links": social_links,
+        "whatsapp_number": whatsapp_number,
+    })
+
+
+def _resolve_public_business_identity(card):
     business = card.business_profile
     if not business:
         raise Http404("Personal details are available only for business cards.")
@@ -131,32 +157,38 @@ def public_person_profile(request, token):
     )
     if not identity:
         raise Http404("Personal details are not available for this card.")
+    return business, identity
 
-    def safe_url(value):
-        try:
-            return normalize_web_url(value)
-        except (ValidationError, ValueError):
-            return ""
 
-    website_url = safe_url(identity["website"])
-    social_links = {
-        field: url for field in ("facebook", "instagram", "linkedin", "github")
-        if (url := safe_url(identity[field]))
-    }
+def _whatsapp_link_number(raw_whatsapp):
     whatsapp_number = ""
-    raw_whatsapp = identity["whatsapp"]
     if raw_whatsapp and all(character in "+()- .0123456789" for character in raw_whatsapp):
         digits = "".join(character for character in raw_whatsapp if character.isdigit())
         if 10 <= len(digits) <= 15:
             whatsapp_number = f"880{digits[1:]}" if len(digits) == 11 and digits.startswith("01") else digits
+    return whatsapp_number
 
-    return render(request, "cards/public_person_profile.html", {
-        "business_profile_url": reverse("public_card", args=[card.public_token]),
-        "identity": identity,
-        "website_url": website_url,
-        "social_links": social_links,
-        "whatsapp_number": whatsapp_number,
-    })
+
+def public_person_vcard(request, token):
+    """Download the card-specific identity without including unrelated owner data."""
+    card = _visible_card(token)
+    _, identity = _resolve_public_business_identity(card)
+    identity = identity.copy()
+    for field in ("website", "facebook", "instagram", "linkedin", "github"):
+        try:
+            identity[field] = normalize_web_url(identity[field]) if identity[field] else ""
+        except (ValidationError, ValueError):
+            identity[field] = ""
+    profile_url = f"{card.public_url.rstrip('/')}/person/"
+    response = HttpResponse(
+        build_public_identity_vcard(identity, profile_url=profile_url),
+        content_type="text/vcard; charset=utf-8",
+    )
+    safe_name = "".join(
+        character for character in identity["name"] if character.isalnum() or character in " -_"
+    ).strip().replace(" ", "_")[:60] or "NexTap_Contact"
+    response["Content-Disposition"] = f'attachment; filename="{safe_name}.vcf"'
+    return response
 
 
 def card_qr_view(request, token):
