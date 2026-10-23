@@ -18,10 +18,19 @@
             {% if business %}
             <div class="profile-content">
                 {% include "profiles/_combined_business_profile.html" with public_card=True preview=False %}
-                <section class="mt-5" aria-labelledby="inquiry-title"><h2 id="inquiry-title" class="h5 fw-bold">Ask this business a question</h2>
-                    <p class="small text-muted">Your details are shared only with this business to respond to your inquiry. Sending is voluntary.</p>
+                <section class="mt-5 nxt-inquiry-section" aria-labelledby="inquiry-title"><h2 id="inquiry-title" class="h5 fw-bold">{{ inquiry_heading }}</h2>
                     {% if inquiry_sent %}<div class="alert alert-success">Your inquiry was sent.</div>{% endif %}
-                    <form method="post">{% csrf_token %}{{ inquiry_form.as_p }}<button type="submit" class="btn btn-primary">Send inquiry</button></form>
+                    <form method="post" class="nxt-inquiry-form">{% csrf_token %}
+                        {% for hidden in inquiry_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        {% for error in inquiry_form.non_field_errors %}<div class="alert alert-danger py-2" role="alert">{{ error }}</div>{% endfor %}
+                        {% for field in inquiry_form.visible_fields %}<div class="mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>{% endfor %}
+                        <p class="small text-muted mb-3">Your contact information will only be shared with this business or organization to respond to your inquiry.</p>
+                        <button type="submit" class="btn btn-primary">Send Inquiry</button>
+                    </form>
                 </section>
             </div>
             {% else %}

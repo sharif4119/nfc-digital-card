@@ -53,6 +53,14 @@ def public_card_view(request, token):
                 inquiry = form.save(commit=False)
                 inquiry.card = card
                 inquiry.source_hash = _visitor_hash(request)
+                inquiry.contact_info = form.cleaned_data["contact_info"]
+                legacy_fields = CardInquiryForm.legacy_contact_fields(inquiry.contact_info)
+                inquiry.phone = legacy_fields["phone"]
+                inquiry.email = legacy_fields["email"]
+                inquiry.interest = ""
+                # New submissions have a purpose notice instead of an explicit
+                # consent checkbox; consent remains a historical field only.
+                inquiry.consent = False
                 inquiry.save()
                 return redirect(f"{request.path}?sent=1")
     if request.method == "GET":
@@ -73,8 +81,12 @@ def public_card_view(request, token):
                           else card.representative)
         identity = resolve_business_identity(business, getattr(card.owner, "profile", None), order, representative)
         identity_message = business_identity_message(business, order) if identity is None else ""
-        if identity:
-            personal_profile_url = reverse("public_person_profile", args=[card.public_token])
+        if identity and identity["kind"] == "owner" and getattr(order, "business_order_type", "") == "SINGLE":
+            personal_card = NFCCard.objects.filter(
+                owner_id=card.owner_id, business_profile__isnull=True, status="ACTIVE",
+            ).exclude(pk=card.pk).order_by("-created_at", "-pk").first()
+            if personal_card:
+                personal_profile_url = reverse("public_card", args=[personal_card.public_token])
         for field, value in (("website", business.website), ("facebook", business.facebook),
                              ("instagram", business.instagram), ("linkedin", business.linkedin)):
             try:
@@ -111,8 +123,17 @@ def public_card_view(request, token):
         "business_banner_url": banner_url, "business_social_links": social_links,
         "featured_offerings": featured_offerings,
         "inquiry_form": form, "inquiry_sent": request.GET.get("sent") == "1",
+        "inquiry_heading": _inquiry_heading(business) if business else "",
         **personal_presentation,
     })
+
+
+def _inquiry_heading(business):
+    if business.profile_type == "ORGANIZATION":
+        if business.organization_category == "EDUCATIONAL_INSTITUTE":
+            return "Contact this Institute"
+        return "Contact this Organization"
+    return "Contact this Business"
 
 
 def public_person_profile(request, token):
