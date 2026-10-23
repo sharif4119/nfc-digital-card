@@ -73,14 +73,8 @@ def public_card_view(request, token):
                           else card.representative)
         identity = resolve_business_identity(business, getattr(card.owner, "profile", None), order, representative)
         identity_message = business_identity_message(business, order) if identity is None else ""
-        # Representatives are not linked to User/Profile records, so only an
-        # owner's Business Single identity can resolve to a personal NFC page.
-        if identity and identity["kind"] == "owner":
-            personal_card = NFCCard.objects.filter(
-                owner=card.owner, business_profile__isnull=True, status="ACTIVE",
-            ).order_by("-activated_at", "-created_at", "-pk").first()
-            if personal_card:
-                personal_profile_url = reverse("public_card", args=[personal_card.public_token])
+        if identity:
+            personal_profile_url = reverse("public_person_profile", args=[card.public_token])
         for field, value in (("website", business.website), ("facebook", business.facebook),
                              ("instagram", business.instagram), ("linkedin", business.linkedin)):
             try:
@@ -118,6 +112,50 @@ def public_card_view(request, token):
         "featured_offerings": featured_offerings,
         "inquiry_form": form, "inquiry_sent": request.GET.get("sent") == "1",
         **personal_presentation,
+    })
+
+
+def public_person_profile(request, token):
+    """Show only the identity fields allowed for this active business card."""
+    card = _visible_card(token)
+    business = card.business_profile
+    if not business:
+        raise Http404("Personal details are available only for business cards.")
+
+    allocation = getattr(card, "allocation", None)
+    order = allocation.order if allocation else getattr(card, "assigned_order", None)
+    representative = (allocation.representative if allocation and allocation.representative_id
+                      else card.representative)
+    identity = resolve_business_identity(
+        business, getattr(card.owner, "profile", None), order, representative,
+    )
+    if not identity:
+        raise Http404("Personal details are not available for this card.")
+
+    def safe_url(value):
+        try:
+            return normalize_web_url(value)
+        except (ValidationError, ValueError):
+            return ""
+
+    website_url = safe_url(identity["website"])
+    social_links = {
+        field: url for field in ("facebook", "instagram", "linkedin", "github")
+        if (url := safe_url(identity[field]))
+    }
+    whatsapp_number = ""
+    raw_whatsapp = identity["whatsapp"]
+    if raw_whatsapp and all(character in "+()- .0123456789" for character in raw_whatsapp):
+        digits = "".join(character for character in raw_whatsapp if character.isdigit())
+        if 10 <= len(digits) <= 15:
+            whatsapp_number = f"880{digits[1:]}" if len(digits) == 11 and digits.startswith("01") else digits
+
+    return render(request, "cards/public_person_profile.html", {
+        "business_profile_url": reverse("public_card", args=[card.public_token]),
+        "identity": identity,
+        "website_url": website_url,
+        "social_links": social_links,
+        "whatsapp_number": whatsapp_number,
     })
 
 

@@ -198,6 +198,12 @@ def business_profile_preview(request):
                 url = ""
             if url:
                 safe_social_links[field] = url
+    personal_profile_url = ""
+    if business_identity:
+        if business_identity["kind"] == "owner":
+            personal_profile_url = reverse("profile_preview")
+        elif selected_card and selected_card.status == "ACTIVE":
+            personal_profile_url = reverse("public_person_profile", args=[selected_card.public_token])
     return render(request, "profiles/business_preview.html", {
         "business": business,
         "is_organization": bool(business and business.profile_type == "ORGANIZATION"),
@@ -208,7 +214,7 @@ def business_profile_preview(request):
         "website_url": website_url,
         "featured_offerings": featured_offerings,
         "business_identity": business_identity, "identity_message": identity_message,
-        "personal_profile_url": reverse("profile_preview") if business_identity and business_identity["kind"] == "owner" else "",
+        "personal_profile_url": personal_profile_url,
         "allocations": allocations, "selected_allocation": selected_allocation,
         "selected_card": selected_card,
         "business_social_links": safe_social_links,
