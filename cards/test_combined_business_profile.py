@@ -90,7 +90,7 @@ class CombinedBusinessProfileTests(TestCase):
         self.business.show_owner_identity = True
         self.business.save()
         self.profile.bio = "A short public introduction."
-        self.profile.whatsapp = "8801700111222"
+        self.profile.whatsapp = "8801800222333"
         self.profile.address = "Private home address"
         self.profile.facebook = "https://facebook.com/private-owner"
         self.profile.save()
@@ -108,7 +108,10 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertIn("Private Owner Name", summary)
         self.assertIn("Founder", summary)
         self.assertIn("A short public introduction.", summary)
-        for private_value in ("+8801700111222", "private@example.com", "Private home address", "private-owner"):
+        for private_value in (
+            "+8801700111222", "private@example.com", "8801800222333",
+            "Private home address", "private-owner",
+        ):
             self.assertNotIn(private_value, summary)
         self.assertNotContains(response, "nxt-person-contacts")
         self.assertNotContains(response, "nxt-person-socials")
@@ -123,26 +126,130 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertContains(response, "View Personal Profile")
         self.assertContains(response, f'href="{reverse("profile_preview")}"')
 
-    def test_public_owner_button_requires_an_active_standalone_personal_card(self):
+    def test_public_owner_button_uses_business_card_person_route_without_a_personal_card(self):
         self.business.show_owner_identity = True
         self.business.save()
         _, _, business_card = self._card()
-        hidden = self.client.get(reverse("public_card", args=[business_card.public_token]))
-        self.assertNotContains(hidden, "View Personal Profile")
-
-        personal_card = NFCCard.objects.create(
-            card_uid="COMBINED-PUBLIC-PERSONAL-DEST", owner=self.owner, status="INACTIVE",
-        )
-        inactive = self.client.get(reverse("public_card", args=[business_card.public_token]))
-        self.assertNotContains(inactive, "View Personal Profile")
-
-        personal_card.status = "ACTIVE"
-        personal_card.save(update_fields=["status"])
         visible = self.client.get(reverse("public_card", args=[business_card.public_token]))
         self.assertContains(visible, "View Personal Profile")
-        self.assertContains(visible, f'href="{reverse("public_card", args=[personal_card.public_token])}"')
+        person_url = reverse("public_person_profile", args=[business_card.public_token])
+        self.assertContains(visible, f'href="{person_url}"')
 
-    def test_public_representative_button_is_hidden_without_a_personal_profile_mapping(self):
+        # No visitor login and no separate Personal NFC Card are required.
+        person_page = self.client.get(person_url)
+        self.assertEqual(person_page.status_code, 200)
+        self.assertContains(person_page, "Private Owner Name")
+        self.assertContains(person_page, "Back to Business Profile")
+        self.assertContains(person_page, f'href="{reverse("public_card", args=[business_card.public_token])}"')
+        self.assertNotContains(person_page, "/profile/preview/")
+
+    def test_public_person_details_obey_each_owner_contact_privacy_setting(self):
+        self.business.show_owner_identity = True
+        self.business.share_owner_phone = True
+        self.business.share_owner_email = False
+        self.business.share_owner_whatsapp = False
+        self.business.share_owner_website = False
+        self.business.share_owner_address = False
+        self.business.share_owner_social = False
+        self.business.save()
+        self.profile.whatsapp = "8801800222333"
+        self.profile.website = "https://private.example.test"
+        self.profile.address = "Private owner address"
+        self.profile.facebook = "https://facebook.com/private-owner"
+        self.profile.save()
+        _, _, card = self._card()
+
+        response = self.client.get(reverse("public_person_profile", args=[card.public_token]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "+8801700111222")
+        for hidden_value in (
+            "private@example.com", "8801800222333", "private.example.test",
+            "Private owner address", "private-owner",
+        ):
+            self.assertNotContains(response, hidden_value)
+
+    def test_public_person_details_hidden_when_identity_sharing_is_off(self):
+        _, _, card = self._card()
+        business_page = self.client.get(reverse("public_card", args=[card.public_token]))
+        self.assertNotContains(business_page, "View Personal Profile")
+        self.assertEqual(
+            self.client.get(reverse("public_person_profile", args=[card.public_token])).status_code,
+            404,
+        )
+
+    def test_inactive_business_card_cannot_expose_person_details(self):
+        _, _, card = self._card(status="INACTIVE")
+        self.business.show_owner_identity = True
+        self.business.save()
+        self.assertEqual(
+            self.client.get(reverse("public_person_profile", args=[card.public_token])).status_code,
+            404,
+        )
+
+    def test_public_multiple_person_pages_use_only_the_card_representative(self):
+        self.business.show_owner_identity = True
+        self.business.save()
+        first_rep = BusinessRepresentative.objects.create(
+            business=self.business, name="Card One Representative", designation="Manager",
+            phone="01711111111", email="one@example.test", phone_public=True, email_public=True,
+        )
+        second_rep = BusinessRepresentative.objects.create(
+            business=self.business, name="Card Two Representative", designation="Director",
+            phone="01722222222", email="two@example.test", phone_public=True, email_public=True,
+        )
+        _, _, first_card = self._card(1, "MULTIPLE", first_rep)
+        _, _, second_card = self._card(2, "MULTIPLE", second_rep)
+
+        first_page = self.client.get(reverse("public_person_profile", args=[first_card.public_token]))
+        second_page = self.client.get(reverse("public_person_profile", args=[second_card.public_token]))
+        first_business_page = self.client.get(reverse("public_card", args=[first_card.public_token]))
+        second_business_page = self.client.get(reverse("public_card", args=[second_card.public_token]))
+
+        self.assertContains(first_business_page, f'href="{reverse("public_person_profile", args=[first_card.public_token])}"')
+        self.assertContains(second_business_page, f'href="{reverse("public_person_profile", args=[second_card.public_token])}"')
+        self.assertContains(first_page, "Card One Representative")
+        self.assertContains(first_page, "one@example.test")
+        self.assertNotContains(first_page, "Card Two Representative")
+        self.assertNotContains(first_page, "Private Owner Name")
+        self.assertContains(second_page, "Card Two Representative")
+        self.assertContains(second_page, "two@example.test")
+        self.assertNotContains(second_page, "Card One Representative")
+
+    def test_public_organization_person_page_uses_assigned_representative(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.show_owner_identity = True
+        self.business.save()
+        rep = BusinessRepresentative.objects.create(
+            business=self.business, name="Institute Representative", designation="Principal",
+            bio="Institute contact", email="principal@example.test", email_public=True,
+        )
+        _, _, card = self._card(rep=rep)
+
+        business_page = self.client.get(reverse("public_card", args=[card.public_token]))
+        response = self.client.get(reverse("public_person_profile", args=[card.public_token]))
+
+        self.assertContains(business_page, f'href="{reverse("public_person_profile", args=[card.public_token])}"')
+        self.assertContains(response, "Institute Representative")
+        self.assertContains(response, "Principal")
+        self.assertContains(response, "principal@example.test")
+        self.assertNotContains(response, "Private Owner Name")
+
+    def test_missing_representative_hides_button_and_person_route_returns_404(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.show_owner_identity = True
+        self.business.save()
+        _, _, card = self._card()
+
+        business_page = self.client.get(reverse("public_card", args=[card.public_token]))
+
+        self.assertNotContains(business_page, "View Personal Profile")
+        self.assertEqual(
+            self.client.get(reverse("public_person_profile", args=[card.public_token])).status_code,
+            404,
+        )
+
+    def test_public_representative_button_uses_card_person_page_not_owner_page(self):
         self.business.profile_type = "ORGANIZATION"
         self.business.show_owner_identity = True
         self.business.save()
@@ -155,7 +262,12 @@ class CombinedBusinessProfileTests(TestCase):
         response = self.client.get(reverse("public_card", args=[card.public_token]))
 
         self.assertContains(response, "Organization Representative")
-        self.assertNotContains(response, "View Personal Profile")
+        person_url = reverse("public_person_profile", args=[card.public_token])
+        self.assertContains(response, "View Personal Profile")
+        self.assertContains(response, f'href="{person_url}"')
+        person_page = self.client.get(person_url)
+        self.assertContains(person_page, "Organization Representative")
+        self.assertNotContains(person_page, "Private Owner Name")
 
     def test_business_multiple_cards_use_only_their_own_representatives(self):
         self.business.show_owner_identity = True
