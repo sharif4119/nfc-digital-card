@@ -102,10 +102,6 @@ class CombinedBusinessProfileTests(TestCase):
         self.business.share_owner_social = True
         self.business.save()
         _, _, card = self._card()
-        personal_card = NFCCard.objects.create(
-            card_uid="COMBINED-OWNER-PERSONAL-LINK", owner=self.owner, status="ACTIVE",
-        )
-
         response = self.client.get(reverse("public_card", args=[card.public_token]))
         body = response.content.decode()
         summary = body.split('<section class="nxt-person-identity"', 1)[1].split("</section>", 1)[0]
@@ -114,7 +110,7 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertIn("A short public introduction.", summary)
         self.assertIn("nxt-person-avatar", summary)
         self.assertIn("View Personal Profile", summary)
-        self.assertIn(reverse("public_card", args=[personal_card.public_token]), summary)
+        self.assertIn(reverse("public_person_profile", args=[card.public_token]), summary)
         for private_value in (
             "+8801700111222", "private@example.com", "8801800222333",
             "Private home address", "private-owner",
@@ -133,16 +129,10 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertContains(response, "View Personal Profile")
         self.assertContains(response, f'href="{reverse("profile_preview")}"')
 
-    def test_public_owner_button_requires_and_opens_active_standalone_personal_card(self):
+    def test_public_owner_button_uses_business_card_person_route_without_standalone_card(self):
         self.business.show_owner_identity = True
         self.business.save()
         _, _, business_card = self._card()
-        visible = self.client.get(reverse("public_card", args=[business_card.public_token]))
-        self.assertNotContains(visible, "View Personal Profile")
-
-        personal_card = NFCCard.objects.create(
-            card_uid="COMBINED-OWNER-STANDALONE", owner=self.owner, status="ACTIVE",
-        )
         self.profile.phone = "+8801700111222"
         self.profile.email = "private@example.com"
         self.profile.website = "https://owner.example.test"
@@ -155,8 +145,9 @@ class CombinedBusinessProfileTests(TestCase):
         self.profile.save()
         visible = self.client.get(reverse("public_card", args=[business_card.public_token]))
         self.assertContains(visible, "View Personal Profile")
-        self.assertContains(visible, f'href="{reverse("public_card", args=[personal_card.public_token])}"')
-        personal_page = self.client.get(reverse("public_card", args=[personal_card.public_token]))
+        person_url = reverse("public_person_profile", args=[business_card.public_token])
+        self.assertContains(visible, f'href="{person_url}"')
+        personal_page = self.client.get(person_url)
         for saved_value in (
             "Private Owner Name", "+8801700111222", "private@example.com",
             "8801800222333", "owner.example.test", "Owner public address",
@@ -165,14 +156,8 @@ class CombinedBusinessProfileTests(TestCase):
         ):
             self.assertContains(personal_page, saved_value)
 
-    def test_public_person_details_obey_each_owner_contact_privacy_setting(self):
+    def test_public_person_details_use_the_single_business_visibility_setting(self):
         self.business.show_owner_identity = True
-        self.business.share_owner_phone = True
-        self.business.share_owner_email = False
-        self.business.share_owner_whatsapp = False
-        self.business.share_owner_website = False
-        self.business.share_owner_address = False
-        self.business.share_owner_social = False
         self.business.save()
         self.profile.whatsapp = "8801800222333"
         self.profile.website = "https://private.example.test"
@@ -184,25 +169,24 @@ class CombinedBusinessProfileTests(TestCase):
         response = self.client.get(reverse("public_person_profile", args=[card.public_token]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "+8801700111222")
-        for hidden_value in (
-            "private@example.com", "8801800222333", "private.example.test", "+8801700111222",
-            "Private owner address", "private-owner",
+        for saved_value in (
+            "+8801700111222", "private@example.com", "8801800222333",
+            "private.example.test", "Private owner address", "private-owner",
         ):
-            self.assertNotContains(response, hidden_value)
+            self.assertContains(response, saved_value)
 
         contact = self.client.get(reverse("public_person_vcard", args=[card.public_token]))
         payload = contact.content.decode()
         self.assertEqual(contact["Content-Type"], "text/vcard; charset=utf-8")
         self.assertIn("FN:Private Owner Name", payload)
-        self.assertNotIn("TEL:+8801700111222", payload)
-        self.assertNotIn("private@example.com", payload)
-        self.assertNotIn("8801800222333", payload)
-        self.assertNotIn("private.example.test", payload)
-        self.assertNotIn("Private owner address", payload)
-        self.assertNotIn("private-owner", payload)
+        self.assertIn("TEL:+8801700111222", payload)
+        self.assertIn("private@example.com", payload)
+        self.assertIn("8801800222333", payload)
+        self.assertIn("private.example.test", payload)
+        self.assertIn("Private owner address", payload)
+        self.assertIn("private-owner", payload)
 
-    def test_business_person_route_does_not_expand_summary_using_legacy_contact_flags(self):
+    def test_business_person_route_expands_owner_profile_even_without_legacy_contact_flags(self):
         self.business.show_owner_identity = True
         for field in (
             "share_owner_phone", "share_owner_email", "share_owner_whatsapp",
@@ -227,19 +211,19 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertContains(response, "Private Owner Name")
         self.assertContains(response, "Founder")
         self.assertContains(response, "A complete public identity.")
-        for private_value in (
+        for saved_value in (
             "+8801700111222", "private@example.com", "8801800222333",
             "Public office address", "owner.example.test", "facebook.com/owner",
         ):
-            self.assertNotContains(response, private_value)
+            self.assertContains(response, saved_value)
 
         contact = self.client.get(reverse("public_person_vcard", args=[card.public_token]))
         payload = contact.content.decode()
         self.assertIn("FN:Private Owner Name", payload)
         self.assertIn(f"{card.public_url.rstrip('/')}/person/", payload)
-        self.assertNotIn("private@example.com", payload)
-        self.assertNotIn("+8801700111222", payload)
-        self.assertNotIn("facebook.com/owner", payload)
+        self.assertIn("private@example.com", payload)
+        self.assertIn("+8801700111222", payload)
+        self.assertIn("facebook.com/owner", payload)
 
     def test_public_person_details_hidden_when_identity_sharing_is_off(self):
         _, _, card = self._card()
@@ -257,6 +241,19 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertEqual(
             self.client.get(reverse("public_person_profile", args=[card.public_token])).status_code,
             404,
+        )
+
+    def test_legacy_single_order_without_type_uses_same_business_person_route(self):
+        self.business.show_owner_identity = True
+        self.business.save()
+        _, _, card = self._card()
+        card.assigned_order.business_order_type = ""
+        card.assigned_order.save(update_fields=["business_order_type"])
+        page = self.client.get(reverse("public_card", args=[card.public_token]))
+        self.assertContains(page, f'href="{reverse("public_person_profile", args=[card.public_token])}"')
+        self.assertContains(
+            self.client.get(reverse("public_person_profile", args=[card.public_token])),
+            "private@example.com",
         )
 
     def test_public_multiple_person_pages_use_only_the_card_representative(self):
@@ -442,7 +439,7 @@ class CombinedBusinessProfileTests(TestCase):
         self.client.force_login(self.owner)
         response = self.client.get(reverse("business_edit"))
         self.assertContains(response, "Show Personal/Representative Information")
-        self.assertContains(response, "Display personal or representative information alongside this business or organization profile.")
+        self.assertContains(response, "When enabled, visitors can view your personal profile, including your saved contact details and social links.")
         self.assertNotContains(response, "Share my personal phone")
         self.assertNotContains(response, "Share my personal email")
         self.assertNotContains(response, "Share my personal WhatsApp")
@@ -638,30 +635,27 @@ class CombinedBusinessProfileTests(TestCase):
         foreign_allocation = CardAllocation.objects.create(order=other_order, position=1)
         self.assertEqual(self.client.get(reverse("business_profile_preview"), {"allocation": foreign_allocation.pk}).status_code, 404)
 
-    def test_offline_vcard_respects_owner_and_representative_contact_visibility(self):
+    def test_offline_vcard_uses_single_owner_toggle_and_representative_permissions(self):
         self.business.show_owner_identity = True
         self.business.save()
         _, _, single = self._card()
+        self.assertTrue(single.business_profile.show_owner_identity)
+        self.assertEqual(single.allocation.order.business_order_type, "SINGLE")
+        self.assertEqual(Profile.objects.get(user=self.owner).full_name, "Private Owner Name")
         vcard = build_vcard(single, offline=True)
-        self.assertNotIn(self.profile.phone, vcard)
-        self.assertNotIn(self.profile.email, vcard)
+        self.assertIn(self.profile.phone, vcard)
+        self.assertIn(self.profile.email, vcard)
         self.profile.whatsapp = "8801700111222"
         self.profile.website = "https://personal.example"
         self.profile.address = "Private street"
         self.profile.facebook = "https://facebook.com/private"
         self.profile.save()
-        self.business.share_owner_phone = True
-        self.business.share_owner_whatsapp = True
-        self.business.share_owner_website = True
-        self.business.share_owner_address = True
-        self.business.share_owner_social = True
-        self.business.save()
         single.refresh_from_db()
         permitted_vcard = build_vcard(single, offline=True)
-        for private_value in (self.profile.phone, self.profile.whatsapp, self.profile.website,
-                              self.profile.address, self.profile.facebook):
-            self.assertNotIn(private_value, permitted_vcard)
-        self.assertNotIn(self.profile.email, permitted_vcard)
+        for shared_value in (self.profile.phone, self.profile.whatsapp, self.profile.email):
+            self.assertIn(shared_value, permitted_vcard)
+        for compact_only_value in (self.profile.website, self.profile.facebook):
+            self.assertNotIn(compact_only_value, permitted_vcard)
         rep = BusinessRepresentative.objects.create(
             business=self.business, name="Representative", phone="+8801999888777",
             email="rep@example.com", phone_public=True,

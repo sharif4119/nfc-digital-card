@@ -228,7 +228,7 @@ class BusinessProfileForm(forms.ModelForm):
         self.fields["banner"].help_text = "Optional organization cover image · up to 5 MB"
         self.fields["show_owner_identity"].label = "Show Personal/Representative Information"
         self.fields["show_owner_identity"].help_text = (
-            "Display personal or representative information alongside this business or organization profile."
+            "When enabled, visitors can view your personal profile, including your saved contact details and social links."
         )
         self.fields["description"].widget.attrs["placeholder"] = (
             "A short introduction to your organization" if organization
