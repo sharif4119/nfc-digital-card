@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 
 from orders.models import Order
+from orders.presentation import get_customer_order_number
 
 from .models import Payment
 
@@ -40,8 +41,8 @@ def initiate_payment(request, order_id):
 
     if order.payment_status == "PAID":
         return redirect(
-            "order_detail",
-            order_id=order.id,
+            "customer_order_detail",
+            customer_order_number=get_customer_order_number(order),
         )
 
     transaction_id = (
@@ -289,6 +290,7 @@ def payment_success(request):
             "payments/payment_success.html",
             {
                 "order": order,
+                "customer_order_number": get_customer_order_number(order),
                 "payment": payment,
             },
         )

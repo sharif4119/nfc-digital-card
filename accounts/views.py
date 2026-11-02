@@ -10,6 +10,7 @@ from .forms import (
 )
 from cards.models import CardVisit, CardInquiry
 from django.db.models import Count
+from orders.presentation import add_customer_order_numbers
 
 
 class NexTapLoginView(LoginView):
@@ -57,9 +58,9 @@ def dashboard_view(request):
         None,
     )
 
-    recent_orders = request.user.orders.order_by(
-        "-created_at"
-    )[:3]
+    recent_orders = add_customer_order_numbers(
+        request.user.orders.order_by("-created_at", "-pk")[:3], request.user,
+    )
     visit_summary = CardVisit.objects.filter(card__owner=request.user).aggregate(
         total=Count("id"), estimated_unique=Count("visitor_hash", distinct=True)
     )

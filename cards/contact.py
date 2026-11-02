@@ -103,11 +103,9 @@ def build_vcard(card, *, offline=False):
         identity = resolve_business_identity(business, owner_profile, order, representative)
         order_type = getattr(order, "business_order_type", "") if order else ""
         share_owner_contacts = bool(
-            business.show_owner_identity
-            and business.profile_type != "ORGANIZATION"
+            identity and identity["kind"] == "owner"
             and order_type in ("", "SINGLE")
-            and owner_profile
-            and owner_profile.full_name
+            and owner_profile and owner_profile.full_name
         )
         contact_name = identity["name"] if identity else (
             owner_profile.full_name if share_owner_contacts else business.name
@@ -127,7 +125,6 @@ def build_vcard(card, *, offline=False):
                 lines.append(prefix + escape(value.strip()))
 
         share_identity_contacts = bool(identity and identity["kind"] == "representative")
-        share_owner_contacts = share_owner_contacts or bool(identity and identity["kind"] == "owner")
         owner_profile = owner_profile if share_owner_contacts else None
         identity_phone = identity["phone"] if share_identity_contacts else getattr(owner_profile, "phone", "")
         identity_email = identity["email"] if share_identity_contacts else getattr(owner_profile, "email", "")

@@ -83,8 +83,7 @@ def public_card_view(request, token):
         identity_message = business_identity_message(business, order) if identity is None else ""
         order_type = getattr(order, "business_order_type", "") if order else ""
         if (identity and identity["kind"] == "owner"
-                and order_type in ("", "SINGLE")
-                and business.profile_type != "ORGANIZATION"):
+                and order_type in ("", "SINGLE")):
             personal_profile_url = reverse("public_person_profile", args=[card.public_token])
         for field, value in (("website", business.website), ("facebook", business.facebook),
                              ("instagram", business.instagram), ("linkedin", business.linkedin)):
@@ -178,8 +177,7 @@ def _resolve_public_business_identity(card):
     if not identity:
         raise Http404("Personal details are not available for this card.")
     order_type = getattr(order, "business_order_type", "") if order else ""
-    if (identity["kind"] == "owner" and business.profile_type != "ORGANIZATION"
-            and order_type in ("", "SINGLE")):
+    if identity["kind"] == "owner" and order_type in ("", "SINGLE"):
         # The business-level visibility setting is the single public opt-in.
         # Keep the compact summary resolver private, and expand only this
         # business-card-specific full profile route with the owner's saved data.

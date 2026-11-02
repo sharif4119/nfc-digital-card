@@ -7,6 +7,7 @@ from products.models import Product
 
 from .forms import OrderForm
 from .models import Order, CardAllocation
+from .presentation import add_customer_order_numbers, get_customer_order_number
 from profiles.models import BusinessProfile
 
 
@@ -58,8 +59,8 @@ def create_order(request, product_id):
             )
 
             return redirect(
-                "order_detail",
-                order_id=order.id,
+                "customer_order_detail",
+                customer_order_number=get_customer_order_number(order),
             )
 
     else:
@@ -101,12 +102,32 @@ def order_detail(request, order_id):
         id=order_id,
         user=request.user,
     )
+    return redirect(
+        "customer_order_detail",
+        customer_order_number=get_customer_order_number(order),
+    )
+
+
+@login_required
+def customer_order_detail(request, customer_order_number):
+    if customer_order_number < 1:
+        from django.http import Http404
+        raise Http404("Order not found.")
+    matching_orders = list(
+        Order.objects.filter(user=request.user)
+        .order_by("created_at", "pk")[customer_order_number - 1:customer_order_number]
+    )
+    if not matching_orders:
+        from django.http import Http404
+        raise Http404("Order not found.")
+    order = matching_orders[0]
 
     return render(
         request,
         "orders/order_detail.html",
         {
             "order": order,
+            "customer_order_number": customer_order_number,
             "allocations": order.allocations.select_related("card", "representative"),
         },
     )
@@ -114,9 +135,9 @@ def order_detail(request, order_id):
 
 @login_required
 def order_list(request):
-    orders = Order.objects.filter(
+    orders = add_customer_order_numbers(Order.objects.filter(
         user=request.user,
-    ).order_by("-created_at")
+    ).order_by("-created_at", "-pk"), request.user)
 
     return render(
         request,
