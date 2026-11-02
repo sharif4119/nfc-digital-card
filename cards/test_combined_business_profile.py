@@ -26,13 +26,14 @@ class CombinedBusinessProfileTests(TestCase):
         self.product = Product.objects.create(name="Business card", price=Decimal("900.00"), card_category="BUSINESS")
 
     def _card(self, position=1, kind="SINGLE", rep=None, status="ACTIVE"):
+        card_number = Order.objects.count() + 1
         order = Order.objects.create(
             user=self.owner, product=self.product, quantity=1, price=Decimal("900.00"),
             customer_name="Account Purchaser", phone="01700000000", address="Dhaka",
             city="Dhaka", business_order_type=kind, business_profile=self.business,
         )
         card = NFCCard.objects.create(
-            card_uid=f"COMBINED-{kind}-{position}", owner=self.owner,
+            card_uid=f"COMBINED-{kind}-{card_number}-{position}", owner=self.owner,
             business_profile=self.business, representative=rep, status=status,
         )
         order.assigned_card = card
@@ -63,7 +64,8 @@ class CombinedBusinessProfileTests(TestCase):
         self.assertEqual(self.business.organization_category, "EDUCATIONAL_INSTITUTE")
         preview = self.client.get(response.url)
         self.assertContains(preview, "Academic Programs")
-        self.assertContains(preview, "Assign a representative to this card to include their details in the preview.")
+        self.assertContains(preview, "Private Owner Name")
+        self.assertNotContains(preview, "Representative not assigned")
         self.assertContains(preview, "Computing")
 
     def test_organization_company_uses_products_and_services_label(self):
@@ -74,6 +76,138 @@ class CombinedBusinessProfileTests(TestCase):
         response = self.client.get(reverse("business_profile_preview"))
         self.assertContains(response, "Products &amp; Services")
         self.assertNotContains(response, "Academic Programs")
+
+    def test_organization_single_owner_profile_is_used_for_both_subtypes(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.show_owner_identity = True
+        self.profile.bio = "Owner profile bio"
+        self.profile.whatsapp = "8801800222333"
+        self.profile.website = "https://owner.example.test"
+        self.profile.address = "Owner office"
+        self.profile.facebook = "https://facebook.com/owner"
+        self.profile.instagram = "https://instagram.com/owner"
+        self.profile.linkedin = "https://linkedin.com/in/owner"
+        self.profile.github = "https://github.com/owner"
+        self.profile.save()
+        for position, category in enumerate(("EDUCATIONAL_INSTITUTE", "COMPANY"), start=1):
+            self.business.organization_category = category
+            self.business.save()
+            _, _, card = self._card(position=position)
+            page = self.client.get(reverse("public_card", args=[card.public_token]))
+            person_url = reverse("public_person_profile", args=[card.public_token])
+            self.assertContains(page, "Private Owner Name")
+            self.assertContains(page, "View Personal Profile")
+            self.assertContains(page, f'href="{person_url}"')
+            person_page = self.client.get(person_url)
+            for value in (
+                "private@example.com", "+8801700111222", "8801800222333",
+                "owner.example.test", "Owner office", "facebook.com/owner",
+                "instagram.com/owner", "linkedin.com/in/owner", "github.com/owner",
+            ):
+                self.assertContains(person_page, value)
+            payload = self.client.get(reverse("public_person_vcard", args=[card.public_token])).content.decode()
+            self.assertIn("private@example.com", payload)
+            self.assertIn("facebook.com/owner", payload)
+            self.assertIn(card.public_url, payload)
+            offline_vcard = build_vcard(card, offline=True)
+            self.assertIn("private@example.com", offline_vcard)
+            self.assertIn("8801800222333", offline_vcard)
+            self.assertIn(card.public_url, offline_vcard)
+
+    def test_organization_single_assigned_representative_overrides_owner(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.organization_category = "EDUCATIONAL_INSTITUTE"
+        self.business.show_owner_identity = True
+        self.business.save()
+        rep = BusinessRepresentative.objects.create(
+            business=self.business, name="Assigned Principal", designation="Principal",
+            phone="01711112222", email="principal@example.edu", phone_public=True,
+            email_public=True,
+        )
+        _, allocation, card = self._card(rep=rep)
+        page = self.client.get(reverse("public_card", args=[card.public_token]))
+        self.assertContains(page, "Assigned Principal")
+        self.assertNotContains(page, "Private Owner Name")
+        self.assertNotContains(page, "View Personal Profile")
+        person_page = self.client.get(reverse("public_person_profile", args=[card.public_token]))
+        self.assertContains(person_page, "principal@example.edu")
+        self.assertNotContains(person_page, "private@example.com")
+        payload = build_vcard(card)
+        self.assertIn("principal@example.edu", payload)
+        self.assertNotIn("private@example.com", payload)
+        self.assertEqual(allocation.representative, rep)
+
+    def test_organization_single_preview_labels_owner_and_works_before_activation(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.organization_category = "EDUCATIONAL_INSTITUTE"
+        self.business.show_owner_identity = True
+        self.business.save()
+        self.client.force_login(self.owner)
+        _, allocation, card = self._card(status="ASSIGNED")
+
+        response = self.client.get(reverse("business_profile_preview"))
+
+        self.assertContains(response, "Card 1 · Owner Personal Profile")
+        self.assertNotContains(response, f"Order #{allocation.order_id}")
+        self.assertContains(response, "Private Owner Name")
+        self.assertNotContains(response, "Representative not assigned")
+        self.assertContains(response, f'href="{reverse("profile_preview")}"')
+        self.assertEqual(self.client.get(reverse("public_card", args=[card.public_token])).status_code, 404)
+        self.assertEqual(allocation.card_id, card.pk)
+
+    def test_multiple_order_preview_distinguishes_same_card_positions_safely(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.show_owner_identity = True
+        self.business.save()
+        representative_one = BusinessRepresentative.objects.create(
+            business=self.business, name="Representative One",
+        )
+        representative_two = BusinessRepresentative.objects.create(
+            business=self.business, name="Representative Two",
+        )
+        _, allocation_one, _ = self._card(1, "MULTIPLE", representative_one)
+        _, allocation_two, _ = self._card(1, "MULTIPLE", representative_two)
+        self.client.force_login(self.owner)
+
+        preview = self.client.get(reverse("business_profile_preview"))
+        business_dashboard = self.client.get(reverse("business_cards"))
+        representative_page = self.client.get(reverse("representative_edit", args=[allocation_one.pk]))
+
+        self.assertContains(preview, "My Order 1 · Card 1 · Representative One")
+        self.assertContains(preview, "My Order 2 · Card 1 · Representative Two")
+        for page in (preview, business_dashboard):
+            self.assertNotContains(page, f"Order #{allocation_one.order_id}")
+            self.assertNotContains(page, f"Order #{allocation_two.order_id}")
+        self.assertContains(business_dashboard, "My Order 1")
+        self.assertContains(business_dashboard, "My Order 2")
+        self.assertContains(business_dashboard, "Representative One")
+        self.assertContains(business_dashboard, "Representative Two")
+        self.assertContains(representative_page, "My Order 1 · Card 1")
+        self.assertNotContains(representative_page, f"Order #{allocation_one.order_id}")
+        self.assertEqual(allocation_one.position, 1)
+        self.assertEqual(allocation_two.position, 1)
+
+    def test_organization_without_orders_can_preview_owner_identity(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.show_owner_identity = True
+        self.business.save()
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("business_profile_preview"))
+
+        self.assertContains(response, "Private Owner Name")
+        self.assertContains(response, "View Personal Profile")
+        self.assertContains(response, f'href="{reverse("profile_preview")}"')
+
+    def test_organization_multiple_never_falls_back_to_purchaser_profile(self):
+        self.business.profile_type = "ORGANIZATION"
+        self.business.show_owner_identity = True
+        self.business.save()
+        _, _, card = self._card(kind="MULTIPLE")
+        response = self.client.get(reverse("public_card", args=[card.public_token]))
+        self.assertNotContains(response, "Private Owner Name")
+        self.assertNotContains(response, "View Personal Profile")
+        self.assertEqual(self.client.get(reverse("public_person_profile", args=[card.public_token])).status_code, 404)
 
     def test_small_business_single_uses_owner_identity_only_after_opt_in(self):
         self.business.show_owner_identity = True
@@ -319,6 +453,8 @@ class CombinedBusinessProfileTests(TestCase):
         self.business.profile_type = "ORGANIZATION"
         self.business.show_owner_identity = True
         self.business.save()
+        self.profile.full_name = ""
+        self.profile.save()
         _, _, card = self._card()
 
         business_page = self.client.get(reverse("public_card", args=[card.public_token]))

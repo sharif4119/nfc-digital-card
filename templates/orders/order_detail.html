@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Order #{{ order.id }}{% endblock %}
+{% block title %}My Order {{ customer_order_number }}{% endblock %}
 
 {% block content %}
 <section class="page-shell">
     <div class="container">
         <a href="{% url 'order_list' %}" class="btn btn-outline-secondary btn-sm mb-4"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to My Orders</a>
         <div class="page-heading">
-            <div><div class="eyebrow">Order summary</div><h1>Order #{{ order.id }}</h1><p>Review your product, delivery details, payment state, and NFC card assignment.</p></div>
+            <div><div class="eyebrow">Order summary</div><h1>My Order {{ customer_order_number }}</h1><p>Review your product, delivery details, payment state, and NFC card assignment.</p></div>
             <span class="status-pill status-{{ order.order_status|lower }}">{{ order.get_order_status_display }}</span>
         </div>
 
@@ -53,7 +53,7 @@
                         {% else %}
                             <div class="notice-box notice-muted mt-0"><i class="bi bi-clock"></i><span>Your NFC card has not been assigned yet.</span></div>
                         {% endif %}
-                        {% if order.quantity > 1 %}<hr><h3 class="h6 fw-bold">Individual cards</h3>{% for allocation in allocations %}<div class="card-meta-row"><span>#{{ allocation.position }} · {{ allocation.representative.name|default:"Representative pending" }}</span><strong>{% if allocation.card %}{{ allocation.card.card_uid }} · {{ allocation.card.status }}{% else %}Awaiting preparation{% endif %}</strong></div>{% endfor %}{% endif %}
+                        {% if allocations %}<hr><h3 class="h6 fw-bold">Individual cards</h3>{% for allocation in allocations %}<div class="card-meta-row"><span>Card {{ allocation.position }} · {{ allocation.representative.name|default:"Representative pending" }}</span><strong>{% if allocation.card %}{{ allocation.card.card_uid }} · {{ allocation.card.status }}{% else %}Awaiting preparation{% endif %}</strong></div>{% endfor %}{% endif %}
                     </div>
                 </article>
             </div>

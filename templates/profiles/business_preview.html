@@ -21,7 +21,7 @@
                     <label class="form-label" for="preview-allocation">Preview identity</label>
                     <select class="form-select" id="preview-allocation" name="allocation" onchange="this.form.submit()">
                         {% if owner_preview_allowed %}<option value="owner"{% if not selected_allocation %} selected{% endif %}>Business Single · Owner identity</option>{% endif %}
-                        {% for allocation in allocations %}<option value="{{ allocation.pk }}"{% if selected_allocation.pk == allocation.pk %} selected{% endif %}>Order #{{ allocation.order_id }} · Card {{ allocation.position }}{% if allocation.representative %} · {{ allocation.representative.name }}{% else %} · Representative not assigned{% endif %}</option>{% endfor %}
+                        {% for allocation in allocations %}<option value="{{ allocation.pk }}"{% if selected_allocation.pk == allocation.pk %} selected{% endif %}>{% if multiple_allocation_orders %}My Order {{ allocation.customer_order_number }} · {% endif %}Card {{ allocation.position }}{% if allocation.representative %} · {{ allocation.representative.name }}{% elif is_organization and allocation.order.business_order_type != "MULTIPLE" and owner_identity_available %} · Owner Personal Profile{% else %} · Representative not assigned{% endif %}</option>{% endfor %}
                     </select>
                 </form>
             {% endif %}

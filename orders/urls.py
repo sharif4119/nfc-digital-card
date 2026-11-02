@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     create_order,
+    customer_order_detail,
     order_detail,
     order_list,
 )
@@ -18,6 +19,12 @@ urlpatterns = [
         "orders/",
         order_list,
         name="order_list",
+    ),
+
+    path(
+        "my-orders/<int:customer_order_number>/",
+        customer_order_detail,
+        name="customer_order_detail",
     ),
 
     path(

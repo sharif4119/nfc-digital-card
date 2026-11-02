@@ -12,6 +12,7 @@ from .models import BusinessProfile, FeaturedOffering
 from .forms import BusinessProfileForm, FeaturedOfferingFormSet, RepresentativeForm
 from .presentation import add_safe_offering_links, personal_profile_presentation
 from orders.models import CardAllocation
+from orders.presentation import customer_order_number_map
 from cards.models import CardInquiry, CardVisit, NFCCard
 from cards.contact import build_profile_vcard
 from cards.presentation import business_identity_message, resolve_business_identity
@@ -169,20 +170,39 @@ def business_profile_preview(request):
     ).select_related("card", "representative", "order").order_by("order__created_at", "position")) if business else []
     selected_allocation = None
     requested_allocation = request.GET.get("allocation")
+    owner_profile = Profile.objects.filter(user=request.user).first()
+    owner_identity_available = bool(
+        business and business.show_owner_identity and owner_profile and owner_profile.full_name
+    )
+    has_multiple_orders = any(row.order.business_order_type == "MULTIPLE" for row in allocations)
+    owner_preview_allowed = bool(
+        business and not has_multiple_orders and (
+            business.profile_type == "SMALL_BUSINESS"
+            or (business.profile_type == "ORGANIZATION" and not allocations)
+        )
+    )
+    order_numbers = customer_order_number_map(request.user)
+    allocation_order_ids = {row.order_id for row in allocations}
+    multiple_allocation_orders = len(allocation_order_ids) > 1
+    for allocation in allocations:
+        allocation.customer_order_number = order_numbers.get(allocation.order_id, "")
     if requested_allocation and requested_allocation != "owner":
         selected_allocation = next((row for row in allocations if str(row.pk) == requested_allocation), None)
         if selected_allocation is None:
             from django.http import Http404
             raise Http404("Card allocation not found.")
-    elif requested_allocation != "owner" and business:
-        if business.profile_type == "ORGANIZATION" or any(row.order.business_order_type == "MULTIPLE" for row in allocations):
+    elif requested_allocation == "owner":
+        if not owner_preview_allowed:
+            from django.http import Http404
+            raise Http404("Owner identity preview is not available for these card allocations.")
+    elif business:
+        if has_multiple_orders or business.profile_type == "ORGANIZATION":
             selected_allocation = next((row for row in allocations if row.order.business_order_type == "MULTIPLE"), None)
             if selected_allocation is None and business.profile_type == "ORGANIZATION":
                 selected_allocation = allocations[0] if allocations else None
     selected_order = selected_allocation.order if selected_allocation else None
     selected_card = selected_allocation.card if selected_allocation else None
     selected_representative = selected_allocation.representative if selected_allocation else None
-    owner_profile = getattr(request.user, "profile", None)
     business_identity = resolve_business_identity(business, owner_profile, selected_order, selected_representative) if business else None
     identity_message = business_identity_message(business, selected_order) if business and business_identity is None else ""
     # Keep preview content explicitly tied to saved FeaturedOffering rows;
@@ -218,7 +238,9 @@ def business_profile_preview(request):
         "allocations": allocations, "selected_allocation": selected_allocation,
         "selected_card": selected_card,
         "business_social_links": safe_social_links,
-        "owner_preview_allowed": bool(business and business.profile_type == "SMALL_BUSINESS" and not any(row.order.business_order_type == "MULTIPLE" for row in allocations)),
+        "owner_preview_allowed": owner_preview_allowed,
+        "owner_identity_available": owner_identity_available,
+        "multiple_allocation_orders": multiple_allocation_orders,
     })
 
 
@@ -244,6 +266,9 @@ def business_cards(request):
     inquiry_counts = dict(inquiries.values("card_id").annotate(total=Count("id")).values_list("card_id", "total"))
     card_rows = [{"card": card, "visits": counts.get(card.id, {}).get("total", 0), "unique": counts.get(card.id, {}).get("unique", 0), "inquiries": inquiry_counts.get(card.id, 0)} for card in cards]
     allocations = CardAllocation.objects.filter(order__user=request.user, order__business_profile=business).select_related("card", "representative", "order")
+    order_numbers = customer_order_number_map(request.user)
+    for allocation in allocations:
+        allocation.customer_order_number = order_numbers.get(allocation.order_id, "")
     recent_inquiries = list(inquiries.select_related("card")[:50])
     inquiry_rows = []
     for inquiry in recent_inquiries:
@@ -275,6 +300,7 @@ def representative_edit(request, allocation_id):
         pk=allocation_id, order__user=request.user,
         order__business_profile__owner=request.user,
     )
+    allocation.customer_order_number = customer_order_number_map(request.user).get(allocation.order_id, "")
     if request.method == "POST":
         form = RepresentativeForm(request.POST, request.FILES, instance=allocation.representative)
         if form.is_valid():

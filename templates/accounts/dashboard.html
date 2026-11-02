@@ -122,11 +122,11 @@
                         <tbody>
                             {% for order in recent_orders %}
                                 <tr>
-                                    <td><span class="order-number">#{{ order.id }}</span></td>
+                                    <td><span class="order-number">My Order {{ order.customer_order_number }}</span></td>
                                     <td>{{ order.product.name }}</td>
                                     <td><strong>৳{{ order.price }}</strong></td>
                                     <td><span class="status-pill status-{{ order.order_status|lower }}">{{ order.get_order_status_display }}</span></td>
-                                    <td class="text-end"><a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-outline-secondary">View</a></td>
+                                    <td class="text-end"><a href="{% url 'customer_order_detail' order.customer_order_number %}" class="btn btn-sm btn-outline-secondary">View</a></td>
                                 </tr>
                             {% endfor %}
                         </tbody>

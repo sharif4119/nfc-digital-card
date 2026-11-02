@@ -9,7 +9,7 @@ from cards.models import NFCCard
 from products.models import Product
 
 from .admin import OrderAdmin
-from .models import Order
+from .models import CardAllocation, Order
 
 
 class OrderFlowTests(TestCase):
@@ -41,15 +41,11 @@ class OrderFlowTests(TestCase):
     def test_order_detail_page_renders(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(
-            reverse(
-                "order_detail",
-                args=[self.order.pk],
-            )
-        )
+        response = self.client.get(reverse("customer_order_detail", args=[1]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Order #")
+        self.assertContains(response, "My Order 1")
+        self.assertNotContains(response, f"Order #{self.order.pk}")
         self.assertContains(
             response,
             "Payment and confirmation will be handled by the seller.",
@@ -57,6 +53,63 @@ class OrderFlowTests(TestCase):
         self.assertNotContains(response, "Pay Now")
         self.assertContains(response, reverse("order_list"))
         self.assertContains(response, "Back to My Orders")
+
+        legacy_response = self.client.get(reverse("order_detail", args=[self.order.pk]), follow=True)
+        self.assertEqual(legacy_response.status_code, 200)
+        self.assertEqual(legacy_response.request["PATH_INFO"], reverse("customer_order_detail", args=[1]))
+        self.assertNotContains(legacy_response, f"/orders/{self.order.pk}/")
+
+    def test_order_list_dashboard_and_details_use_account_local_order_numbers(self):
+        later_order = Order.objects.create(
+            user=self.user, product=self.product, quantity=1, price=self.product.price,
+            customer_name="Second Customer", phone="01700000001", address="Second address", city="Dhaka",
+        )
+        self.client.force_login(self.user)
+
+        history = self.client.get(reverse("order_list"))
+        dashboard = self.client.get(reverse("dashboard"))
+        detail = self.client.get(reverse("customer_order_detail", args=[1]))
+
+        for response in (history, dashboard):
+            self.assertContains(response, "My Order 1")
+            self.assertContains(response, "My Order 2")
+            self.assertNotContains(response, f"Order #{self.order.pk}")
+            self.assertNotContains(response, f"Order #{later_order.pk}")
+            self.assertNotContains(response, f"/orders/{self.order.pk}/")
+            self.assertNotContains(response, f"/orders/{later_order.pk}/")
+        self.assertContains(detail, "My Order 1")
+        self.assertNotContains(detail, f"Order #{self.order.pk}")
+
+        other_order = Order.objects.create(
+            user=self.other_user, product=self.product, quantity=1, price=self.product.price,
+            customer_name="Other Customer", phone="01700000002", address="Other address", city="Dhaka",
+        )
+        self.client.force_login(self.other_user)
+        other_history = self.client.get(reverse("order_list"))
+        self.assertContains(other_history, "My Order 1")
+        self.assertNotContains(other_history, "My Order 2")
+        self.assertNotContains(other_history, f"Order #{other_order.pk}")
+
+    def test_order_details_number_every_allocation_from_card_one(self):
+        CardAllocation.objects.create(order=self.order, position=1)
+        multiple_order = Order.objects.create(
+            user=self.user, product=self.product, quantity=2, price=self.product.price * 2,
+            customer_name="Multiple Customer", phone="01700000003", address="Multi address", city="Dhaka",
+        )
+        CardAllocation.objects.bulk_create([
+            CardAllocation(order=multiple_order, position=1),
+            CardAllocation(order=multiple_order, position=2),
+        ])
+        self.client.force_login(self.user)
+
+        single_detail = self.client.get(reverse("customer_order_detail", args=[1]))
+        multiple_detail = self.client.get(reverse("customer_order_detail", args=[2]))
+
+        self.assertContains(single_detail, "Card 1 · Representative pending")
+        self.assertContains(multiple_detail, "Card 1 · Representative pending")
+        self.assertContains(multiple_detail, "Card 2 · Representative pending")
+        self.assertNotContains(single_detail, f"/orders/{self.order.pk}/")
+        self.assertNotContains(multiple_detail, f"/orders/{multiple_order.pk}/")
 
     def test_create_order_has_back_link_to_product_details(self):
         self.client.force_login(self.user)
@@ -117,8 +170,8 @@ class OrderFlowTests(TestCase):
         self.assertRedirects(
             response,
             reverse(
-                "order_detail",
-                args=[created_order.pk],
+                "customer_order_detail",
+                args=[2],
             ),
         )
         self.assertEqual(created_order.quantity, 1)
@@ -151,7 +204,7 @@ class OrderFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.request["PATH_INFO"],
-            reverse("order_detail", args=[created_order.pk]),
+            reverse("customer_order_detail", args=[2]),
         )
         self.assertEqual(created_order.payment_status, "UNPAID")
         self.assertEqual(created_order.order_status, "PENDING")
