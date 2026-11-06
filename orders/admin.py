@@ -5,6 +5,12 @@ from cards.models import NFCCard
 from .models import Order, CardAllocation
 
 
+class CardAllocationInline(admin.TabularInline):
+    model = CardAllocation
+    extra = 0
+    fields = ("position", "card", "representative")
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = [
@@ -18,17 +24,28 @@ class OrderAdmin(admin.ModelAdmin):
         "created_at",
     ]
 
+    date_hierarchy = "created_at"
+    list_per_page = 50
+
     list_filter = [
         "payment_status",
         "order_status",
     ]
 
     search_fields = [
+        "id",
         "customer_name",
         "phone",
+        "address",
+        "city",
         "user__username",
+        "user__email",
+        "user__profile__full_name",
         "assigned_card__card_uid",
+        "product__name",
     ]
+
+    inlines = (CardAllocationInline,)
 
     readonly_fields = [
         "created_at",

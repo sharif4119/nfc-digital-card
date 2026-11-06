@@ -1,0 +1,82 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/nxtap_admin.css' %}">
+<link rel="stylesheet" href="{% static 'admin/css/nxtap_products.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="nxtap-admin-dashboard">
+    <header class="nxtap-admin-heading">
+        <div>
+            <p class="nxtap-admin-kicker">NexTap operations</p>
+            <h1>Admin overview</h1>
+            <p class="nxtap-admin-subtitle">A current view of orders, card inventory, and customer activity.</p>
+        </div>
+        <nav class="nxtap-admin-shortcuts" aria-label="Management shortcuts">
+            <a href="{{ nxtap_admin_links.orders }}">Orders</a>
+            <a href="{{ nxtap_admin_links.cards }}">Cards</a>
+            <a href="{{ nxtap_admin_links.products }}">Card products</a>
+            <a href="{{ nxtap_admin_links.users }}">Users</a>
+        </nav>
+    </header>
+
+    <section class="nxtap-admin-stats" aria-label="Business statistics">
+        <article><span>Total orders</span><strong>{{ nxtap_admin_stats.total_orders }}</strong></article>
+        <article><span>Registered users</span><strong>{{ nxtap_admin_stats.total_users }}</strong></article>
+        <article><span>Cards sold · paid orders</span><strong>{{ nxtap_admin_stats.cards_sold }}</strong></article>
+        <article><span>Paid revenue</span><strong>৳{{ nxtap_admin_stats.paid_revenue|floatformat:2 }}</strong></article>
+        <article><span>Pending orders</span><strong>{{ nxtap_admin_stats.pending_orders }}</strong></article>
+        <article><span>Available card products</span><strong>{{ nxtap_admin_stats.available_products }}</strong></article>
+        <article><span>Unassigned cards</span><strong>{{ nxtap_admin_stats.unassigned_cards }}</strong></article>
+        <article><span>Active cards</span><strong>{{ nxtap_admin_stats.active_cards }}</strong></article>
+    </section>
+
+    <section class="nxtap-admin-panel nxtap-admin-products-panel">
+        <div class="nxtap-admin-panel-heading"><div><h2>Available card products</h2><p>Update product names, descriptions, images, prices, and availability.</p></div><a href="{{ nxtap_admin_links.products }}">Manage products</a></div>
+        <div class="nxtap-admin-product-grid">
+            {% for product in nxtap_card_products %}
+                <article class="nxtap-admin-product-card">
+                    {% if product.admin_image_url %}<img src="{{ product.admin_image_url }}" alt="">{% else %}<div class="nxtap-admin-product-placeholder"><i class="bi bi-credit-card-2-front" aria-hidden="true"></i></div>{% endif %}
+                    <div class="nxtap-admin-product-copy"><span class="nxtap-admin-product-category">{{ product.get_card_category_display }}</span><h3>{{ product.name }}</h3><p>{{ product.description|default:"No description added."|truncatechars:90 }}</p><strong>৳{{ product.price|floatformat:2 }}</strong></div>
+                    {% if perms.products.change_product %}<a class="nxtap-admin-edit-button" href="{% url 'admin:products_product_change' product.pk %}">Edit details</a>{% endif %}
+                </article>
+            {% endfor %}
+            {% if perms.products.add_product %}<a class="nxtap-admin-add-product" href="{{ nxtap_admin_links.add_product }}"><span class="nxtap-admin-add-icon" aria-hidden="true">+</span><strong>Add card product</strong><span>Create another Personal or Business card listing</span></a>{% endif %}
+        </div>
+    </section>
+
+    <div class="nxtap-admin-columns">
+        <section class="nxtap-admin-panel">
+            <div class="nxtap-admin-panel-heading"><h2>Recent orders</h2><a href="{{ nxtap_admin_links.orders }}">View all</a></div>
+            {% if nxtap_recent_orders %}<div class="nxtap-admin-table-wrap"><table class="nxtap-admin-table">
+                <thead><tr><th>Order</th><th>Customer</th><th>Product</th><th>Price</th><th>Payment</th><th>Status</th></tr></thead>
+                <tbody>{% for order in nxtap_recent_orders %}<tr>
+                    <td><a href="{% url 'admin:orders_order_change' order.pk %}">#{{ order.pk }}</a></td>
+                    <td>{{ order.customer_name|default:order.user.username }}</td><td>{{ order.product.name }}</td>
+                    <td>৳{{ order.price|floatformat:2 }}</td><td>{{ order.payment_status }}</td><td>{{ order.order_status }}</td>
+                </tr>{% endfor %}</tbody>
+            </table></div>{% else %}<p class="nxtap-admin-empty">No orders have been recorded.</p>{% endif %}
+        </section>
+        <section class="nxtap-admin-panel">
+            <div class="nxtap-admin-panel-heading"><h2>Recently created cards</h2><a href="{{ nxtap_admin_links.cards }}">View all</a></div>
+            {% if nxtap_recent_cards %}<div class="nxtap-admin-table-wrap"><table class="nxtap-admin-table">
+                <thead><tr><th>Card UID</th><th>Owner</th><th>Business</th><th>Status</th><th>Created</th></tr></thead>
+                <tbody>{% for card in nxtap_recent_cards %}<tr>
+                    <td><a href="{% url 'admin:cards_nfccard_change' card.pk %}">{{ card.card_uid }}</a></td>
+                    <td>{{ card.owner|default:"—" }}</td><td>{{ card.business_profile|default:"—" }}</td>
+                    <td><span class="nxtap-status nxtap-status-{{ card.status|lower }}">{{ card.get_status_display }}</span></td>
+                    <td>{{ card.created_at|date:"M j, Y" }}</td>
+                </tr>{% endfor %}</tbody>
+            </table></div>{% else %}<p class="nxtap-admin-empty">No cards have been created.</p>{% endif %}
+        </section>
+    </div>
+
+    <div class="nxtap-admin-columns nxtap-admin-summaries">
+        <section class="nxtap-admin-panel"><h2>Order status</h2>{% for row in nxtap_order_status_summary %}<div class="nxtap-summary-row"><span>{{ row.order_status|title }}</span><strong>{{ row.total }}</strong></div>{% empty %}<p class="nxtap-admin-empty">No orders.</p>{% endfor %}</section>
+        <section class="nxtap-admin-panel"><h2>Payment status</h2>{% for row in nxtap_payment_status_summary %}<div class="nxtap-summary-row"><span>{{ row.payment_status|title }}</span><strong>{{ row.total }}</strong></div>{% empty %}<p class="nxtap-admin-empty">No payments recorded on orders.</p>{% endfor %}</section>
+    </div>
+
+</div>
+{% endblock %}

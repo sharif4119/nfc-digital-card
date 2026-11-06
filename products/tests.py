@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
@@ -53,3 +54,30 @@ class ProductCatalogTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("product_list"))
         self.assertContains(response, "Back to Cards")
+
+
+class ProductAdminTests(TestCase):
+    def test_product_rows_have_edit_details_action_and_supported_fields(self):
+        admin_user = User.objects.create_superuser(
+            username="product-admin", email="product-admin@example.test", password="test-password-123"
+        )
+        product = Product.objects.create(
+            name="Admin Personal Card", description="Editable bio", price=Decimal("750.00")
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(reverse("admin:products_product_changelist"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Edit details")
+        self.assertContains(response, reverse("admin:products_product_change", args=[product.pk]))
+        change_response = self.client.get(reverse("admin:products_product_change", args=[product.pk]))
+        self.assertContains(change_response, "Editable bio")
+
+        from django.contrib import admin
+        model_admin = admin.site._registry[Product]
+        form = model_admin.get_form(None)
+        for field in ("name", "description", "price", "image"):
+            self.assertIn(field, form.base_fields)
+        self.assertNotIn("card_width_mm", form.base_fields)
+        self.assertNotIn("card_height_mm", form.base_fields)
