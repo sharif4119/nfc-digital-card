@@ -156,6 +156,7 @@ class CustomerRegistrationTests(TestCase):
                 self.assertTrue(customer.check_password(password))
                 self.client.logout()
 
+
     def test_registration_requires_nonempty_matching_passwords(self):
         empty_response = self.client.post(
             reverse("register"),
@@ -321,7 +322,7 @@ class AuthenticationCompatibilityTests(TestCase):
                 "password": "seller-pass-123",
             },
         )
-        self.assertRedirects(web_response, reverse("dashboard"))
+        self.assertRedirects(web_response, reverse("admin:index"))
         self.client.logout()
 
         admin_response = self.client.post(
@@ -345,3 +346,62 @@ class AuthenticationCompatibilityTests(TestCase):
 
         self.assertEqual(seller_response.status_code, 200)
         self.assertIn("token", seller_response.json())
+
+
+class RoleBasedDashboardRedirectTests(TestCase):
+    def setUp(self):
+        self.customer = User.objects.create_user(
+            username="redirect-customer",
+            email="redirect-customer@example.test",
+            password="test-password-123",
+        )
+        self.staff_admin = User.objects.create_user(
+            username="redirect-admin",
+            email="redirect-admin@example.test",
+            password="test-password-123",
+            is_staff=True,
+        )
+
+    def test_staff_admin_login_redirects_directly_to_admin_dashboard_without_profile(self):
+        response = self.client.post(reverse("login"), {
+            "username": "redirect-admin",
+            "password": "test-password-123",
+        })
+        self.assertRedirects(response, reverse("admin:index"))
+        dashboard = self.client.get(reverse("admin:index"))
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn("nxtap_admin_stats", dashboard.context)
+        self.assertEqual(self.staff_admin.profile.full_name, "")
+
+    def test_customer_login_still_redirects_to_customer_dashboard(self):
+        response = self.client.post(reverse("login"), {
+            "username": "redirect-customer@example.test",
+            "password": "test-password-123",
+        })
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertEqual(self.client.get(reverse("dashboard")).status_code, 200)
+
+    def test_admin_opening_customer_dashboard_is_sent_to_admin(self):
+        self.client.force_login(self.staff_admin)
+        response = self.client.get(reverse("dashboard"))
+        self.assertRedirects(response, reverse("admin:index"))
+
+    def test_customer_cannot_open_admin_and_unauthenticated_user_is_sent_to_login(self):
+        admin_url = reverse("admin:index")
+        response = self.client.get(admin_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("admin:login"), response["Location"])
+
+        self.client.force_login(self.customer)
+        denied = self.client.get(admin_url, follow=True)
+        self.assertLessEqual(len(denied.redirect_chain), 2)
+        self.assertNotContains(denied, "NexTap operations")
+
+    def test_logout_works_for_customer_and_admin(self):
+        logout_url = reverse("logout")
+        for user in (self.customer, self.staff_admin):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                response = self.client.post(logout_url)
+                self.assertIn(response.status_code, (200, 302))
+                self.assertFalse(response.wsgi_request.user.is_authenticated)

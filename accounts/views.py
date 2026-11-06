@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from .forms import (
     EmailOrUsernameAuthenticationForm,
@@ -17,9 +18,17 @@ class NexTapLoginView(LoginView):
     authentication_form = EmailOrUsernameAuthenticationForm
     template_name = "registration/login.html"
 
+    def get_success_url(self):
+        user = self.request.user
+        if user.is_active and user.is_staff:
+            return reverse("admin:index")
+        return super().get_success_url()
+
 
 def register_view(request):
     if request.user.is_authenticated:
+        if request.user.is_active and request.user.is_staff:
+            return redirect("admin:index")
         return redirect("dashboard")
 
     if request.method == "POST":
@@ -49,6 +58,9 @@ def register_view(request):
 
 @login_required
 def dashboard_view(request):
+    if request.user.is_active and request.user.is_staff:
+        return redirect("admin:index")
+
     cards = request.user.nfc_cards.order_by("-created_at")
     card = cards.filter(status="ACTIVE").first() or cards.first()
 
